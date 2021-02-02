@@ -187,8 +187,8 @@ func (p *Persistence) PendingRequestsToJoinForCommunity(id []byte) ([]*RequestTo
 	return requests, nil
 }
 
-func (p *Persistence) SetRequestToJoinState(communityID []byte, state uint) error {
-	_, err := p.db.Exec(`UPDATE communities_requests_to_join SET state = ? WHERE community_id = ?`, state, communityID)
+func (p *Persistence) SetRequestToJoinState(pk string, communityID []byte, state uint) error {
+	_, err := p.db.Exec(`UPDATE communities_requests_to_join SET state = ? WHERE community_id = ? AND public_key = ?`, state, communityID, pk)
 	return err
 }
 

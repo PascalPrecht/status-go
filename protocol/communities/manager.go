@@ -303,7 +303,7 @@ func (m *Manager) markRequestToJoin(pk *ecdsa.PublicKey, community *Community) e
 	m.logger.Debug("Checking if needs to be marked", zap.Any("identity", m.identity))
 	if community.HasMember(pk) {
 		m.logger.Debug("makring if needs to be marked")
-		return m.persistence.SetRequestToJoinState(community.ID(), RequestToJoinStateAccepted)
+		return m.persistence.SetRequestToJoinState(common.PubkeyToHex(pk), community.ID(), RequestToJoinStateAccepted)
 	}
 	return nil
 }
