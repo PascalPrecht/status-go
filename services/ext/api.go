@@ -682,7 +682,7 @@ func (api *PublicAPI) GetLinkPreviewData(link string) (previewData urls.LinkPrev
 	return urls.GetLinkPreviewData(link)
 }
 
-func (api *PublicAPI) ENSVerified(pk, ensName string) error {
+func (api *PublicAPI) EnsVerified(pk, ensName string) error {
 	return api.service.messenger.ENSVerified(pk, ensName)
 }
 

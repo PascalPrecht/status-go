@@ -50,9 +50,18 @@ func (v *Verifier) Stop() error {
 // ENSVerified adds an already verified entry to the ens table
 func (v *Verifier) ENSVerified(pk, ensName string, clock uint64) error {
 
-	record, err := v.Add(pk, ensName, clock)
+	// Add returns nil if no record was available
+	oldRecord, err := v.Add(pk, ensName, clock)
 	if err != nil {
 		return err
+	}
+
+	var record *ENSVerificationRecord
+
+	if oldRecord != nil {
+		record = oldRecord
+	} else {
+		record = &ENSVerificationRecord{PublicKey: pk, Name: ensName, Clock: clock}
 	}
 
 	record.VerifiedAt = clock

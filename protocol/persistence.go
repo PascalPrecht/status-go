@@ -409,7 +409,8 @@ func (db sqlitePersistence) Contacts() ([]*Contact, error) {
 		SELECT
 			c.id,
 			c.address,
-			c.name,
+			v.name,
+			v.verified,
 			c.alias,
 			c.identicon,
 			c.last_updated,
@@ -418,7 +419,7 @@ func (db sqlitePersistence) Contacts() ([]*Contact, error) {
 			c.local_nickname,
 			i.image_type,
 			i.payload
-		FROM contacts c LEFT JOIN chat_identity_contacts i ON c.id = i.contact_id
+		FROM contacts c LEFT JOIN chat_identity_contacts i ON c.id = i.contact_id LEFT JOIN ens_verification_records v ON c.id = v.public_key
 	`)
 	if err != nil {
 		return nil, err
@@ -433,6 +434,8 @@ func (db sqlitePersistence) Contacts() ([]*Contact, error) {
 			encodedSystemTags []byte
 			nickname          sql.NullString
 			imageType         sql.NullString
+			ensName           sql.NullString
+			ensVerified       sql.NullBool
 			imagePayload      []byte
 		)
 
@@ -441,7 +444,8 @@ func (db sqlitePersistence) Contacts() ([]*Contact, error) {
 		err := rows.Scan(
 			&contact.ID,
 			&contact.Address,
-			&contact.Name,
+			&ensName,
+			&ensVerified,
 			&contact.Alias,
 			&contact.Identicon,
 			&contact.LastUpdated,
@@ -457,6 +461,14 @@ func (db sqlitePersistence) Contacts() ([]*Contact, error) {
 
 		if nickname.Valid {
 			contact.LocalNickname = nickname.String
+		}
+
+		if ensName.Valid {
+			contact.Name = ensName.String
+		}
+
+		if ensVerified.Valid {
+			contact.ENSVerified = ensVerified.Bool
 		}
 
 		if encodedDeviceInfo != nil {
