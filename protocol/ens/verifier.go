@@ -47,6 +47,25 @@ func (v *Verifier) Stop() error {
 	return nil
 }
 
+// ENSVerified adds an already verified entry to the ens table
+func (v *Verifier) ENSVerified(pk, ensName string, clock uint64) error {
+
+	record, err := v.Add(pk, ensName, clock)
+	if err != nil {
+		return err
+	}
+
+	record.VerifiedAt = clock
+	record.Verified = true
+	records := []*ENSVerificationRecord{record}
+	err = v.persistence.UpdateRecords(records)
+	if err != nil {
+		return err
+	}
+	v.publish(records)
+	return nil
+}
+
 func (v *Verifier) Add(pk, ensName string, clock uint64) (*ENSVerificationRecord, error) {
 	record := ENSVerificationRecord{PublicKey: pk, Name: ensName, Clock: clock}
 	return v.persistence.AddRecord(record)

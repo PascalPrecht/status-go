@@ -682,6 +682,10 @@ func (api *PublicAPI) GetLinkPreviewData(link string) (previewData urls.LinkPrev
 	return urls.GetLinkPreviewData(link)
 }
 
+func (api *PublicAPI) ENSVerified(pk, ensName string) error {
+	return api.service.messenger.ENSVerified(pk, ensName)
+}
+
 // Echo is a method for testing purposes.
 func (api *PublicAPI) Echo(ctx context.Context, message string) (string, error) {
 	return message, nil
