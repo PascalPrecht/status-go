@@ -394,6 +394,11 @@ func (api *PublicAPI) AcceptRequestToJoinCommunity(request *requests.AcceptReque
 	return api.service.messenger.AcceptRequestToJoinCommunity(request)
 }
 
+// DeclineRequestToJoinCommunity accepts a pending request to join a community
+func (api *PublicAPI) DeclineRequestToJoinCommunity(request *requests.DeclineRequestToJoinCommunity) error {
+	return api.service.messenger.DeclineRequestToJoinCommunity(request)
+}
+
 // RequestToJoinCommunity requests to join a particular community
 func (api *PublicAPI) RequestToJoinCommunity(request *requests.RequestToJoinCommunity) (*protocol.MessengerResponse, error) {
 	return api.service.messenger.RequestToJoinCommunity(request)

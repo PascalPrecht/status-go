@@ -327,6 +327,16 @@ func (m *Manager) AcceptRequestToJoin(request *requests.AcceptRequestToJoinCommu
 	return m.inviteUserToCommunity(community, pk)
 }
 
+func (m *Manager) DeclineRequestToJoin(request *requests.DeclineRequestToJoinCommunity) error {
+	dbRequest, err := m.persistence.GetRequestToJoin(request.ID)
+	if err != nil {
+		return err
+	}
+
+	return m.persistence.SetRequestToJoinState(dbRequest.PublicKey, dbRequest.CommunityID, RequestToJoinStateDeclined)
+
+}
+
 func (m *Manager) HandleCommunityRequestToJoin(signer *ecdsa.PublicKey, request *protobuf.CommunityRequestToJoin) (*RequestToJoin, error) {
 	community, err := m.persistence.GetByID(m.identity, request.CommunityId)
 	if err != nil {

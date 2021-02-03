@@ -214,6 +214,14 @@ func (m *Messenger) AcceptRequestToJoinCommunity(request *requests.AcceptRequest
 	return &MessengerResponse{Communities: []*communities.Community{community}}, nil
 }
 
+func (m *Messenger) DeclineRequestToJoinCommunity(request *requests.DeclineRequestToJoinCommunity) error {
+	if err := request.Validate(); err != nil {
+		return err
+	}
+
+	return m.communitiesManager.DeclineRequestToJoin(request)
+}
+
 func (m *Messenger) LeaveCommunity(communityID types.HexBytes) (*MessengerResponse, error) {
 	response := &MessengerResponse{}
 

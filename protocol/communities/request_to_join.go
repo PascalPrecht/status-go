@@ -8,7 +8,7 @@ import (
 
 const (
 	RequestToJoinStatePending uint = iota + 1
-	RequestToJoinStateDenied
+	RequestToJoinStateDeclined
 	RequestToJoinStateAccepted
 )
 
