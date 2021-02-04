@@ -758,8 +758,8 @@ func (p *MessageProcessor) notifyOnScheduledMessage(message *RawMessage) {
 	}
 }
 
-func (p *MessageProcessor) JoinPublic(chatID string) error {
-	return p.transport.JoinPublic(chatID)
+func (p *MessageProcessor) JoinPublic(id string) (*transport.Filter, error) {
+	return p.transport.JoinPublic(id)
 }
 
 // AddEphemeralKey adds an ephemeral key that we will be listening to

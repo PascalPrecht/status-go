@@ -169,9 +169,8 @@ func (a *Transport) ProcessNegotiatedSecret(secret types.NegotiatedSecret) (*tra
 	return filter, nil
 }
 
-func (a *Transport) JoinPublic(chatID string) error {
-	_, err := a.filters.LoadPublic(chatID)
-	return err
+func (a *Transport) JoinPublic(chatID string) (*transport.Filter, error) {
+	return a.filters.LoadPublic(chatID)
 }
 
 func (a *Transport) LeavePublic(chatID string) error {
@@ -182,13 +181,8 @@ func (a *Transport) LeavePublic(chatID string) error {
 	return a.filters.Remove(chat)
 }
 
-func (a *Transport) JoinPrivate(publicKey *ecdsa.PublicKey) error {
-	_, err := a.filters.LoadDiscovery()
-	if err != nil {
-		return err
-	}
-	_, err = a.filters.LoadContactCode(publicKey)
-	return err
+func (a *Transport) JoinPrivate(publicKey *ecdsa.PublicKey) (*transport.Filter, error) {
+	return a.filters.LoadContactCode(publicKey)
 }
 
 func (a *Transport) LeavePrivate(publicKey *ecdsa.PublicKey) error {
@@ -196,18 +190,17 @@ func (a *Transport) LeavePrivate(publicKey *ecdsa.PublicKey) error {
 	return a.filters.Remove(filters...)
 }
 
-func (a *Transport) JoinGroup(publicKeys []*ecdsa.PublicKey) error {
-	_, err := a.filters.LoadDiscovery()
-	if err != nil {
-		return err
-	}
+func (a *Transport) JoinGroup(publicKeys []*ecdsa.PublicKey) ([]*transport.Filter, error) {
+	var filters []*transport.Filter
 	for _, pk := range publicKeys {
-		_, err = a.filters.LoadContactCode(pk)
+		f, err := a.filters.LoadContactCode(pk)
 		if err != nil {
-			return err
+			return nil, err
 		}
+		filters = append(filters, f)
+
 	}
-	return nil
+	return filters, nil
 }
 
 func (a *Transport) LeaveGroup(publicKeys []*ecdsa.PublicKey) error {

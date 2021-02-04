@@ -201,10 +201,6 @@ func (api *PublicAPI) ConfirmMessagesProcessedByID(messageConfirmations []*Metad
 	return api.service.ConfirmMessagesProcessed(encryptionIDs)
 }
 
-func (api *PublicAPI) Join(chat protocol.Chat) error {
-	return api.service.messenger.Join(chat)
-}
-
 func (api *PublicAPI) Leave(chat protocol.Chat) error {
 	return api.service.messenger.Leave(chat)
 }
@@ -259,6 +255,10 @@ func (api *PublicAPI) LoadFilters(parent context.Context, chats []*transport.Fil
 
 func (api *PublicAPI) SaveChat(parent context.Context, chat *protocol.Chat) error {
 	return api.service.messenger.SaveChat(chat)
+}
+
+func (api *PublicAPI) CreateOneToOneChat(parent context.Context, request *requests.CreateOneToOneChat) (*protocol.MessengerResponse, error) {
+	return api.service.messenger.CreateOneToOneChat(request)
 }
 
 func (api *PublicAPI) Chats(parent context.Context) []*protocol.Chat {
@@ -369,9 +369,14 @@ func (api *PublicAPI) CreateCommunityChat(communityID types.HexBytes, c *protobu
 	return api.service.messenger.CreateCommunityChat(communityID, c)
 }
 
-// InviteUserToCommunity invites the user with pk to the community with ID
-func (api *PublicAPI) InviteUserToCommunity(communityID types.HexBytes, userPublicKey string) (*protocol.MessengerResponse, error) {
-	return api.service.messenger.InviteUserToCommunity(communityID, userPublicKey)
+// InviteUsersToCommunity invites the users with pks to the community with ID
+func (api *PublicAPI) InviteUsersToCommunity(request *requests.InviteUsersToCommunity) (*protocol.MessengerResponse, error) {
+	return api.service.messenger.InviteUsersToCommunity(request)
+}
+
+// ShareCommunity share the community with a set of users
+func (api *PublicAPI) ShareCommunity(request *requests.ShareCommunity) (*protocol.MessengerResponse, error) {
+	return api.service.messenger.ShareCommunity(request)
 }
 
 // RemoveUserFromCommunity removes the user with pk from the community with ID

@@ -118,7 +118,7 @@ func (s *MessengerCommunitiesSuite) TestRetrieveCommunity() {
 	inputMessage.Text = "some text"
 	inputMessage.CommunityID = community.IDString()
 
-	err = s.bob.SaveChat(&chat)
+	err = s.bob.SaveChat(chat)
 	s.NoError(err)
 	_, err = s.bob.SendChatMessage(context.Background(), inputMessage)
 	s.NoError(err)
@@ -197,7 +197,7 @@ func (s *MessengerCommunitiesSuite) TestJoinCommunity() {
 	inputMessage.Text = "some text"
 	inputMessage.CommunityID = community.IDString()
 
-	err = s.bob.SaveChat(&chat)
+	err = s.bob.SaveChat(chat)
 	s.NoError(err)
 	_, err = s.bob.SendChatMessage(context.Background(), inputMessage)
 	s.NoError(err)
@@ -294,7 +294,7 @@ func (s *MessengerCommunitiesSuite) TestJoinCommunity() {
 	s.Require().Len(response.RemovedChats, 2)
 }
 
-func (s *MessengerCommunitiesSuite) TestInviteUserToCommunity() {
+func (s *MessengerCommunitiesSuite) TestInviteUsersToCommunity() {
 	description := &requests.CreateCommunity{
 		Membership:  protobuf.CommunityPermissions_NO_MEMBERSHIP,
 		Name:        "status",
@@ -309,7 +309,12 @@ func (s *MessengerCommunitiesSuite) TestInviteUserToCommunity() {
 
 	community := response.Communities[0]
 
-	response, err = s.bob.InviteUserToCommunity(community.ID(), common.PubkeyToHex(&s.alice.identity.PublicKey))
+	response, err = s.bob.InviteUsersToCommunity(
+		&requests.InviteUsersToCommunity{
+			CommunityID: community.ID(),
+			Users:       []types.HexBytes{common.PubkeyToHexBytes(&s.alice.identity.PublicKey)},
+		},
+	)
 	s.Require().NoError(err)
 	s.Require().NotNil(response)
 	s.Require().Len(response.Communities, 1)
@@ -371,7 +376,12 @@ func (s *MessengerCommunitiesSuite) TestPostToCommunityChat() {
 	s.Require().Len(response.Communities, 1)
 	s.Require().Len(response.Chats, 1)
 
-	response, err = s.bob.InviteUserToCommunity(community.ID(), common.PubkeyToHex(&s.alice.identity.PublicKey))
+	response, err = s.bob.InviteUsersToCommunity(
+		&requests.InviteUsersToCommunity{
+			CommunityID: community.ID(),
+			Users:       []types.HexBytes{common.PubkeyToHexBytes(&s.alice.identity.PublicKey)},
+		},
+	)
 	s.Require().NoError(err)
 	s.Require().NotNil(response)
 	s.Require().Len(response.Communities, 1)
@@ -472,7 +482,12 @@ func (s *MessengerCommunitiesSuite) TestImportCommunity() {
 	newUser, err := crypto.GenerateKey()
 	s.Require().NoError(err)
 
-	_, err = s.bob.InviteUserToCommunity(community.ID(), common.PubkeyToHex(&newUser.PublicKey))
+	_, err = s.bob.InviteUsersToCommunity(
+		&requests.InviteUsersToCommunity{
+			CommunityID: community.ID(),
+			Users:       []types.HexBytes{common.PubkeyToHexBytes(&newUser.PublicKey)},
+		},
+	)
 	s.Require().NoError(err)
 
 	// Pull message and make sure org is received
@@ -511,9 +526,9 @@ func (s *MessengerCommunitiesSuite) TestRequestAccess() {
 
 	chat := CreateOneToOneChat(common.PubkeyToHex(&s.alice.identity.PublicKey), &s.alice.identity.PublicKey, s.alice.transport)
 
-	s.Require().NoError(s.bob.SaveChat(&chat))
+	s.Require().NoError(s.bob.SaveChat(chat))
 
-	message := buildTestMessage(chat)
+	message := buildTestMessage(*chat)
 	message.CommunityID = community.IDString()
 
 	// We send a community link to alice
@@ -650,4 +665,45 @@ func (s *MessengerCommunitiesSuite) TestRequestAccess() {
 	s.Require().NoError(err)
 	s.Require().Len(requestsToJoin, 0)
 
+}
+
+func (s *MessengerCommunitiesSuite) TestShareCommunity() {
+	description := &requests.CreateCommunity{
+		Membership:  protobuf.CommunityPermissions_NO_MEMBERSHIP,
+		Name:        "status",
+		Description: "status community description",
+	}
+
+	// Create an community chat
+	response, err := s.bob.CreateCommunity(description)
+	s.Require().NoError(err)
+	s.Require().NotNil(response)
+	s.Require().Len(response.Communities, 1)
+
+	community := response.Communities[0]
+
+	response, err = s.bob.ShareCommunity(
+		&requests.ShareCommunity{
+			CommunityID: community.ID(),
+			Users:       []types.HexBytes{common.PubkeyToHexBytes(&s.alice.identity.PublicKey)},
+		},
+	)
+	s.Require().NoError(err)
+	s.Require().NotNil(response)
+	s.Require().Len(response.Messages, 1)
+
+	// Pull message and make sure org is received
+	err = tt.RetryWithBackOff(func() error {
+		response, err = s.alice.RetrieveAll()
+		if err != nil {
+			return err
+		}
+		if len(response.Messages) == 0 {
+			return errors.New("community link not received")
+		}
+		return nil
+	})
+
+	s.Require().NoError(err)
+	s.Require().Len(response.Messages, 1)
 }

@@ -261,7 +261,7 @@ func (m *MessageHandler) HandleSyncInstallationPublicChat(state *ReceivedMessage
 
 	chat := CreatePublicChat(chatID, state.Timesource)
 
-	state.AllChats[chat.ID] = &chat
+	state.AllChats[chat.ID] = chat
 	state.ModifiedChats[chat.ID] = true
 
 	return true
@@ -350,7 +350,7 @@ func (m *MessageHandler) HandleCommunityDescription(state *ReceivedMessageState,
 		oldChat, ok := state.AllChats[chat.ID]
 		if !ok {
 			// Beware, don't use the reference in the range (i.e chat) as it's a shallow copy
-			state.AllChats[chat.ID] = &chats[i]
+			state.AllChats[chat.ID] = chats[i]
 
 			state.ModifiedChats[chat.ID] = true
 			chatIDs = append(chatIDs, chat.ID)
@@ -765,8 +765,7 @@ func (m *MessageHandler) matchChatEntity(chatEntity common.ChatEntity, chats map
 				return nil, errors.Wrap(err, "failed to decode pubkey")
 			}
 
-			newChat := CreateOneToOneChat(chatID[:8], pubKey, timesource)
-			chat = &newChat
+			chat = CreateOneToOneChat(chatID[:8], pubKey, timesource)
 		}
 		return chat, nil
 	case chatEntity.GetMessageType() == protobuf.MessageType_ONE_TO_ONE:
@@ -776,8 +775,7 @@ func (m *MessageHandler) matchChatEntity(chatEntity common.ChatEntity, chats map
 		chat := chats[chatID]
 		if chat == nil {
 			// TODO: this should be a three-word name used in the mobile client
-			newChat := CreateOneToOneChat(chatID[:8], chatEntity.GetSigPubKey(), timesource)
-			chat = &newChat
+			chat = CreateOneToOneChat(chatID[:8], chatEntity.GetSigPubKey(), timesource)
 		}
 		return chat, nil
 	case chatEntity.GetMessageType() == protobuf.MessageType_COMMUNITY_CHAT:

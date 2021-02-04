@@ -1165,28 +1165,6 @@ func (m *Messenger) Mailservers() ([]string, error) {
 	return nil, ErrNotImplemented
 }
 
-func (m *Messenger) Join(chat Chat) error {
-	switch chat.ChatType {
-	case ChatTypeOneToOne:
-		pk, err := chat.PublicKey()
-		if err != nil {
-			return err
-		}
-
-		return m.transport.JoinPrivate(pk)
-	case ChatTypePrivateGroupChat:
-		members, err := chat.MembersAsPublicKeys()
-		if err != nil {
-			return err
-		}
-		return m.transport.JoinGroup(members)
-	case ChatTypePublic, ChatTypeProfile, ChatTypeTimeline:
-		return m.transport.JoinPublic(chat.ID)
-	default:
-		return errors.New("chat is neither public nor private")
-	}
-}
-
 // This is not accurate, it should not leave transport on removal of chat/group
 // only once there is no more: Group chat with that member, one-to-one chat, contact added by us
 func (m *Messenger) Leave(chat Chat) error {
@@ -1736,7 +1714,7 @@ func (m *Messenger) ConfirmJoiningGroup(ctx context.Context, chatID string) (*Me
 		return nil, ErrChatNotFound
 	}
 
-	err := m.Join(*chat)
+	_, err := m.Join(chat)
 	if err != nil {
 		return nil, err
 	}
@@ -1860,135 +1838,6 @@ func (m *Messenger) LeaveGroupChat(ctx context.Context, chatID string, remove bo
 	}
 
 	return &response, m.saveChat(chat)
-}
-
-func (m *Messenger) saveChat(chat *Chat) error {
-	previousChat, ok := m.allChats[chat.ID]
-	if chat.OneToOne() {
-		name, identicon, err := generateAliasAndIdenticon(chat.ID)
-		if err != nil {
-			return err
-		}
-
-		chat.Alias = name
-		chat.Identicon = identicon
-	}
-	// Sync chat if it's a new active public chat
-	if !ok && chat.Active && chat.Public() {
-
-		if err := m.syncPublicChat(context.Background(), chat); err != nil {
-			return err
-		}
-	}
-
-	// We check if it's a new chat, or chat.Active has changed
-	// we check here, but we only re-register once the chat has been
-	// saved an added
-	shouldRegisterForPushNotifications := chat.Public() && (!ok && chat.Active) || (ok && chat.Active != previousChat.Active)
-
-	err := m.persistence.SaveChat(*chat)
-	if err != nil {
-		return err
-	}
-	m.allChats[chat.ID] = chat
-
-	if shouldRegisterForPushNotifications {
-		// Re-register for push notifications, as we want to receive mentions
-		if err := m.reregisterForPushNotifications(); err != nil {
-			return err
-		}
-
-	}
-
-	return nil
-}
-
-func (m *Messenger) saveChats(chats []*Chat) error {
-	err := m.persistence.SaveChats(chats)
-	if err != nil {
-		return err
-	}
-	for _, chat := range chats {
-		m.allChats[chat.ID] = chat
-	}
-
-	return nil
-
-}
-
-func (m *Messenger) SaveChat(chat *Chat) error {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-	return m.saveChat(chat)
-}
-
-func (m *Messenger) Chats() []*Chat {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
-	var chats []*Chat
-
-	for _, c := range m.allChats {
-		chats = append(chats, c)
-	}
-
-	return chats
-}
-
-func (m *Messenger) DeleteChat(chatID string) error {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
-	err := m.persistence.DeleteChat(chatID)
-	if err != nil {
-		return err
-	}
-	chat, ok := m.allChats[chatID]
-
-	if ok && chat.Active && chat.Public() {
-		delete(m.allChats, chatID)
-		return m.reregisterForPushNotifications()
-	}
-
-	return nil
-}
-
-func (m *Messenger) DeactivateChat(chatID string) (*MessengerResponse, error) {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-	return m.deactivateChat(chatID)
-}
-
-func (m *Messenger) deactivateChat(chatID string) (*MessengerResponse, error) {
-	var response MessengerResponse
-	chat, ok := m.allChats[chatID]
-	if !ok {
-		return nil, ErrChatNotFound
-	}
-
-	clock, _ := chat.NextClockAndTimestamp(m.getTimesource())
-
-	err := m.persistence.DeactivateChat(chat, clock)
-
-	if err != nil {
-		return nil, err
-	}
-
-	// We re-register as our options have changed and we don't want to
-	// receive PN from mentions in this chat anymore
-	if chat.Public() {
-		err := m.reregisterForPushNotifications()
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	m.allChats[chatID] = chat
-
-	response.Chats = []*Chat{chat}
-	// TODO: Remove filters
-
-	return &response, nil
 }
 
 func (m *Messenger) reregisterForPushNotifications() error {

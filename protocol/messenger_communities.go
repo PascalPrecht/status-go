@@ -78,8 +78,8 @@ func (m *Messenger) handleCommunitiesSubscription(c chan *communities.Subscripti
 					}
 				}
 
-				if sub.Invitation != nil {
-					err := m.publishOrgInvitation(sub.Community, sub.Invitation)
+				for _, invitation := range sub.Invitations {
+					err := m.publishOrgInvitation(sub.Community, invitation)
 					if err != nil {
 						m.logger.Warn("failed to publish org invitation", zap.Error(err))
 					}
@@ -142,12 +142,10 @@ func (m *Messenger) JoinCommunity(communityID types.HexBytes) (*MessengerRespons
 
 	chatIDs := []string{org.IDString()}
 
-	chats := CreateCommunityChats(org, m.getTimesource())
+	response.Chats = CreateCommunityChats(org, m.getTimesource())
 
-	// Beware don't use `chat` as a reference
-	for i, chat := range chats {
+	for _, chat := range response.Chats {
 		chatIDs = append(chatIDs, chat.ID)
-		response.Chats = append(response.Chats, &chats[i])
 	}
 
 	// Load transport filters
@@ -271,7 +269,7 @@ func (m *Messenger) CreateCommunityChat(communityID types.HexBytes, c *protobuf.
 	var chatIDs []string
 	for chatID, chat := range changes.ChatsAdded {
 		c := CreateCommunityChat(org.IDString(), chatID, chat, m.getTimesource())
-		chats = append(chats, &c)
+		chats = append(chats, c)
 		chatIDs = append(chatIDs, c.ID)
 	}
 
@@ -341,20 +339,58 @@ func (m *Messenger) ImportCommunity(key *ecdsa.PrivateKey) (*MessengerResponse, 
 	}, nil
 }
 
-func (m *Messenger) InviteUserToCommunity(communityID types.HexBytes, pkString string) (*MessengerResponse, error) {
-	publicKey, err := common.HexToPubkey(pkString)
-	if err != nil {
+func (m *Messenger) InviteUsersToCommunity(request *requests.InviteUsersToCommunity) (*MessengerResponse, error) {
+	if err := request.Validate(); err != nil {
 		return nil, err
 	}
 
-	org, err := m.communitiesManager.InviteUserToCommunity(communityID, publicKey)
+	var publicKeys []*ecdsa.PublicKey
+	for _, pkBytes := range request.Users {
+		publicKey, err := common.HexToPubkey(pkBytes.String())
+		if err != nil {
+			return nil, err
+		}
+		publicKeys = append(publicKeys, publicKey)
+
+	}
+
+	community, err := m.communitiesManager.InviteUsersToCommunity(request.CommunityID, publicKeys)
 	if err != nil {
 		return nil, err
 	}
 
 	return &MessengerResponse{
-		Communities: []*communities.Community{org},
+		Communities: []*communities.Community{community},
 	}, nil
+}
+
+func (m *Messenger) ShareCommunity(request *requests.ShareCommunity) (*MessengerResponse, error) {
+	if err := request.Validate(); err != nil {
+		return nil, err
+	}
+	response := &MessengerResponse{}
+
+	var messages []*common.Message
+	for _, pk := range request.Users {
+		message := &common.Message{}
+		message.ChatId = pk.String()
+		message.CommunityID = request.CommunityID.String()
+		message.Text = "Upgrade to see a community invitation"
+		messages = append(messages, message)
+		r, err := m.CreateOneToOneChat(&requests.CreateOneToOneChat{ID: pk})
+		if err != nil {
+			return nil, err
+		}
+
+		response.Merge(r)
+	}
+
+	sendMessagesResponse, err := m.SendChatMessages(context.Background(), messages)
+	if err != nil {
+		return nil, err
+	}
+	response.Merge(sendMessagesResponse)
+	return response, nil
 }
 
 func (m *Messenger) MyPendingRequestsToJoin() ([]*communities.RequestToJoin, error) {

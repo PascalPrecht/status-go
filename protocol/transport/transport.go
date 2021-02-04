@@ -11,11 +11,11 @@ import (
 type Transport interface {
 	Stop() error
 
-	JoinPrivate(publicKey *ecdsa.PublicKey) error
+	JoinPrivate(publicKey *ecdsa.PublicKey) (*Filter, error)
 	LeavePrivate(publicKey *ecdsa.PublicKey) error
-	JoinGroup(publicKeys []*ecdsa.PublicKey) error
+	JoinGroup(publicKeys []*ecdsa.PublicKey) ([]*Filter, error)
 	LeaveGroup(publicKeys []*ecdsa.PublicKey) error
-	JoinPublic(chatID string) error
+	JoinPublic(chatID string) (*Filter, error)
 	LeavePublic(chatID string) error
 	GetCurrentTime() uint64
 	MaxMessageSize() uint32

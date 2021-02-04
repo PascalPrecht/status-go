@@ -74,21 +74,21 @@ func (s *MessengerEmojiSuite) TestSendEmoji() {
 
 	chat := CreatePublicChat(chatID, alice.transport)
 
-	err = alice.SaveChat(&chat)
+	err = alice.SaveChat(chat)
 	s.Require().NoError(err)
 
-	err = alice.Join(chat)
+	_, err = alice.Join(chat)
 	s.Require().NoError(err)
 
-	err = bob.SaveChat(&chat)
+	err = bob.SaveChat(chat)
 	s.Require().NoError(err)
 
-	err = bob.Join(chat)
+	_, err = bob.Join(chat)
 	s.Require().NoError(err)
 
 	// Send chat message from bob to alice
 
-	message := buildTestMessage(chat)
+	message := buildTestMessage(*chat)
 	_, err = alice.SendChatMessage(context.Background(), message)
 	s.NoError(err)
 

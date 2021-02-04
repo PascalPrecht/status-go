@@ -41,6 +41,7 @@ func (m *MessengerResponse) Merge(response *MessengerResponse) error {
 
 	m.overrideChats(response.Chats)
 	m.overrideMessages(response.Messages)
+	m.overrideFilters(response.Filters)
 
 	return nil
 }
@@ -73,6 +74,22 @@ func (m *MessengerResponse) overrideMessages(messages []*common.Message) {
 		}
 		if !found {
 			m.Messages = append(m.Messages, overrideMessage)
+		}
+	}
+}
+
+// overrideFilters append new filters and override existing ones in response.Filters
+func (m *MessengerResponse) overrideFilters(filters []*transport.Filter) {
+	for _, overrideFilter := range filters {
+		var found = false
+		for idx, filter := range m.Filters {
+			if filter.FilterID == overrideFilter.FilterID {
+				m.Filters[idx] = overrideFilter
+				found = true
+			}
+		}
+		if !found {
+			m.Filters = append(m.Filters, overrideFilter)
 		}
 	}
 }

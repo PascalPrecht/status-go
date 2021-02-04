@@ -119,7 +119,7 @@ func (s *MessengerInstallationSuite) TestReceiveInstallation() {
 	s.Require().True(actualContact.IsAdded())
 
 	chat := CreatePublicChat(statusChatID, s.m.transport)
-	err = s.m.SaveChat(&chat)
+	err = s.m.SaveChat(chat)
 	s.Require().NoError(err)
 
 	response, err = WaitOnMessengerResponse(
@@ -151,7 +151,7 @@ func (s *MessengerInstallationSuite) TestSyncInstallation() {
 
 	// add chat
 	chat := CreatePublicChat(statusChatID, s.m.transport)
-	err = s.m.SaveChat(&chat)
+	err = s.m.SaveChat(chat)
 	s.Require().NoError(err)
 
 	// pair
@@ -263,9 +263,9 @@ func (s *MessengerInstallationSuite) TestSyncInstallationNewMessages() {
 
 	alicePkString := types.EncodeHex(crypto.FromECDSAPub(&alice.identity.PublicKey))
 	chat := CreateOneToOneChat(alicePkString, &alice.identity.PublicKey, bob1.transport)
-	s.Require().NoError(bob1.SaveChat(&chat))
+	s.Require().NoError(bob1.SaveChat(chat))
 
-	inputMessage := buildTestMessage(chat)
+	inputMessage := buildTestMessage(*chat)
 	_, err = s.m.SendChatMessage(context.Background(), inputMessage)
 	s.Require().NoError(err)
 

@@ -61,8 +61,8 @@ func NewManager(identity *ecdsa.PublicKey, db *sql.DB, logger *zap.Logger, verif
 }
 
 type Subscription struct {
-	Community  *Community
-	Invitation *protobuf.CommunityInvitation
+	Community   *Community
+	Invitations []*protobuf.CommunityInvitation
 }
 
 func (m *Manager) Subscribe() chan *Subscription {
@@ -324,7 +324,7 @@ func (m *Manager) AcceptRequestToJoin(request *requests.AcceptRequestToJoinCommu
 		return nil, err
 	}
 
-	return m.inviteUserToCommunity(community, pk)
+	return m.inviteUsersToCommunity(community, []*ecdsa.PublicKey{pk})
 }
 
 func (m *Manager) DeclineRequestToJoin(request *requests.DeclineRequestToJoinCommunity) error {
@@ -425,28 +425,32 @@ func (m *Manager) LeaveCommunity(id types.HexBytes) (*Community, error) {
 	return community, nil
 }
 
-func (m *Manager) inviteUserToCommunity(community *Community, pk *ecdsa.PublicKey) (*Community, error) {
-	invitation, err := community.InviteUserToOrg(pk)
+func (m *Manager) inviteUsersToCommunity(community *Community, pks []*ecdsa.PublicKey) (*Community, error) {
+	var invitations []*protobuf.CommunityInvitation
+	for _, pk := range pks {
+		invitation, err := community.InviteUserToOrg(pk)
+		if err != nil {
+			return nil, err
+		}
+		// We mark the user request (if any) as completed
+		if err := m.markRequestToJoin(pk, community); err != nil {
+			return nil, err
+		}
+
+		invitations = append(invitations, invitation)
+	}
+
+	err := m.persistence.SaveCommunity(community)
 	if err != nil {
 		return nil, err
 	}
 
-	err = m.persistence.SaveCommunity(community)
-	if err != nil {
-		return nil, err
-	}
-
-	// We mark the user request (if any) as completed
-	if err := m.markRequestToJoin(pk, community); err != nil {
-		return nil, err
-	}
-
-	m.publish(&Subscription{Community: community, Invitation: invitation})
+	m.publish(&Subscription{Community: community, Invitations: invitations})
 
 	return community, nil
 }
 
-func (m *Manager) InviteUserToCommunity(communityID types.HexBytes, pk *ecdsa.PublicKey) (*Community, error) {
+func (m *Manager) InviteUsersToCommunity(communityID types.HexBytes, pks []*ecdsa.PublicKey) (*Community, error) {
 	community, err := m.GetByID(communityID)
 	if err != nil {
 		return nil, err
@@ -455,7 +459,7 @@ func (m *Manager) InviteUserToCommunity(communityID types.HexBytes, pk *ecdsa.Pu
 		return nil, ErrOrgNotFound
 	}
 
-	return m.inviteUserToCommunity(community, pk)
+	return m.inviteUsersToCommunity(community, pks)
 }
 
 func (m *Manager) RemoveUserFromCommunity(id types.HexBytes, pk *ecdsa.PublicKey) (*Community, error) {
