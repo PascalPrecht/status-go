@@ -75,9 +75,6 @@ func (s *FiltersManager) Init(
 	chatIDs []string,
 	publicKeys []*ecdsa.PublicKey,
 ) ([]*Filter, error) {
-	logger := s.logger.With(zap.String("site", "Init"))
-
-	logger.Info("initializing")
 
 	// Load our contact code.
 	_, err := s.LoadContactCode(&s.privateKey.PublicKey)
@@ -526,8 +523,6 @@ func (s *FiltersManager) addSymmetric(chatID string) (*RawFilter, error) {
 	topic := ToTopic(chatID)
 	topics := [][]byte{topic}
 
-	s.logger.Debug("initating sym topic", zap.Binary("topic", topic[:]), zap.String("chat-id", chatID))
-
 	symKey, ok := s.keys[chatID]
 	if ok {
 		symKeyID, err = s.service.AddSymKeyDirect(symKey)
@@ -580,7 +575,6 @@ func (s *FiltersManager) addAsymmetric(chatID string, identity *ecdsa.PrivateKey
 
 	topic := ToTopic(chatID)
 	topics := [][]byte{topic}
-	s.logger.Debug("initating asym topic", zap.Binary("topic", topic[:]), zap.String("chat-id", chatID))
 
 	privateKeyID, err := s.service.AddKeyPair(identity)
 	if err != nil {

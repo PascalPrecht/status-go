@@ -344,6 +344,10 @@ func (m *Messenger) InviteUsersToCommunity(request *requests.InviteUsersToCommun
 		return nil, err
 	}
 
+	response := &MessengerResponse{}
+	var messages []*common.Message
+
+
 	var publicKeys []*ecdsa.PublicKey
 	for _, pkBytes := range request.Users {
 		publicKey, err := common.HexToPubkey(pkBytes.String())
@@ -352,16 +356,32 @@ func (m *Messenger) InviteUsersToCommunity(request *requests.InviteUsersToCommun
 		}
 		publicKeys = append(publicKeys, publicKey)
 
+		message := &common.Message{}
+		message.ChatId = pkBytes.String()
+		message.CommunityID = request.CommunityID.String()
+		message.Text = "Upgrade to see a community invitation"
+		messages = append(messages, message)
+		r, err := m.CreateOneToOneChat(&requests.CreateOneToOneChat{ID: pkBytes})
+		if err != nil {
+			return nil, err
+		}
+
+		response.Merge(r)
 	}
 
 	community, err := m.communitiesManager.InviteUsersToCommunity(request.CommunityID, publicKeys)
 	if err != nil {
 		return nil, err
 	}
+	sendMessagesResponse, err := m.SendChatMessages(context.Background(), messages)
+	if err != nil {
+		return nil, err
+	}
+	response.Merge(sendMessagesResponse)
 
-	return &MessengerResponse{
-		Communities: []*communities.Community{community},
-	}, nil
+
+	response.Communities = []*communities.Community{community}
+	return response, nil
 }
 
 func (m *Messenger) ShareCommunity(request *requests.ShareCommunity) (*MessengerResponse, error) {
