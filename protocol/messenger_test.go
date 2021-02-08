@@ -1040,9 +1040,8 @@ func (s *MessengerSuite) TestChatPersistencePublic() {
 	s.Require().Equal(1, len(savedChats))
 
 	actualChat := savedChats[0]
-	expectedChat := &chat
 
-	s.Require().Equal(actualChat, expectedChat)
+	s.Require().Equal(chat, actualChat)
 }
 
 func (s *MessengerSuite) TestDeleteChat() {
@@ -1088,9 +1087,8 @@ func (s *MessengerSuite) TestChatPersistenceUpdate() {
 	s.Require().Equal(1, len(savedChats))
 
 	actualChat := savedChats[0]
-	expectedChat := &chat
 
-	s.Require().Equal(expectedChat, actualChat)
+	s.Require().Equal(chat, actualChat)
 
 	chat.Name = "updated-name-1"
 	s.Require().NoError(s.m.SaveChat(chat))
@@ -1098,9 +1096,8 @@ func (s *MessengerSuite) TestChatPersistenceUpdate() {
 	s.Require().Equal(1, len(updatedChats))
 
 	actualUpdatedChat := updatedChats[0]
-	expectedUpdatedChat := &chat
 
-	s.Require().Equal(expectedUpdatedChat, actualUpdatedChat)
+	s.Require().Equal(chat, actualUpdatedChat)
 }
 
 func (s *MessengerSuite) TestChatPersistenceOneToOne() {
@@ -1132,14 +1129,13 @@ func (s *MessengerSuite) TestChatPersistenceOneToOne() {
 	s.Require().Equal(1, len(savedChats))
 
 	actualChat := savedChats[0]
-	expectedChat := &chat
 
 	actualPk, err := actualChat.PublicKey()
 	s.Require().NoError(err)
 
 	s.Require().Equal(pk, actualPk)
 
-	s.Require().Equal(expectedChat, actualChat)
+	s.Require().Equal(chat, actualChat)
 	s.Require().NotEmpty(actualChat.Identicon)
 	s.Require().NotEmpty(actualChat.Alias)
 }
@@ -1210,9 +1206,8 @@ func (s *MessengerSuite) TestChatPersistencePrivateGroupChat() {
 	s.Require().Equal(1, len(savedChats))
 
 	actualChat := savedChats[0]
-	expectedChat := &chat
 
-	s.Require().Equal(expectedChat, actualChat)
+	s.Require().Equal(chat, actualChat)
 }
 
 func (s *MessengerSuite) TestBlockContact() {
@@ -2514,7 +2509,7 @@ func (s *MessageHandlerSuite) TestRun() {
 	for idx, tc := range testCases {
 		s.Run(tc.Name, func() {
 			chatsMap := make(map[string]*Chat)
-			if tc.Chat.ID != "" {
+			if tc.Chat != nil && tc.Chat.ID != "" {
 				chatsMap[tc.Chat.ID] = tc.Chat
 			}
 

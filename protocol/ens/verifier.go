@@ -17,7 +17,7 @@ type Verifier struct {
 	persistence     *Persistence
 	logger          *zap.Logger
 	timesource      common.TimeSource
-	subscriptions   []chan []*ENSVerificationRecord
+	subscriptions   []chan []*VerificationRecord
 	rpcEndpoint     string
 	contractAddress string
 	quit            chan struct{}
@@ -56,17 +56,17 @@ func (v *Verifier) ENSVerified(pk, ensName string, clock uint64) error {
 		return err
 	}
 
-	var record *ENSVerificationRecord
+	var record *VerificationRecord
 
 	if oldRecord != nil {
 		record = oldRecord
 	} else {
-		record = &ENSVerificationRecord{PublicKey: pk, Name: ensName, Clock: clock}
+		record = &VerificationRecord{PublicKey: pk, Name: ensName, Clock: clock}
 	}
 
 	record.VerifiedAt = clock
 	record.Verified = true
-	records := []*ENSVerificationRecord{record}
+	records := []*VerificationRecord{record}
 	err = v.persistence.UpdateRecords(records)
 	if err != nil {
 		return err
@@ -75,8 +75,8 @@ func (v *Verifier) ENSVerified(pk, ensName string, clock uint64) error {
 	return nil
 }
 
-func (v *Verifier) Add(pk, ensName string, clock uint64) (*ENSVerificationRecord, error) {
-	record := ENSVerificationRecord{PublicKey: pk, Name: ensName, Clock: clock}
+func (v *Verifier) Add(pk, ensName string, clock uint64) (*VerificationRecord, error) {
+	record := VerificationRecord{PublicKey: pk, Name: ensName, Clock: clock}
 	return v.persistence.AddRecord(record)
 }
 
@@ -91,6 +91,7 @@ func (v *Verifier) verifyLoop() {
 		select {
 
 		case <-v.quit:
+			ticker.Stop()
 			return
 		case <-ticker.C:
 			if !v.online || v.rpcEndpoint == "" || v.contractAddress == "" {
@@ -103,17 +104,15 @@ func (v *Verifier) verifyLoop() {
 
 		}
 	}
-
-	ticker.Stop()
 }
 
-func (v *Verifier) Subscribe() chan []*ENSVerificationRecord {
-	c := make(chan []*ENSVerificationRecord)
+func (v *Verifier) Subscribe() chan []*VerificationRecord {
+	c := make(chan []*VerificationRecord)
 	v.subscriptions = append(v.subscriptions, c)
 	return c
 }
 
-func (v *Verifier) publish(records []*ENSVerificationRecord) {
+func (v *Verifier) publish(records []*VerificationRecord) {
 	v.logger.Info("publishing records", zap.Any("records", records))
 	// Publish on channels, drop if buffer is full
 	for _, s := range v.subscriptions {
@@ -140,7 +139,7 @@ func (v *Verifier) verify(rpcEndpoint, contractAddress string) error {
 		return err
 	}
 
-	recordsMap := make(map[string]*ENSVerificationRecord)
+	recordsMap := make(map[string]*VerificationRecord)
 
 	for _, r := range ensToBeVerified {
 		recordsMap[r.PublicKey] = r
@@ -157,7 +156,7 @@ func (v *Verifier) verify(rpcEndpoint, contractAddress string) error {
 		return err
 	}
 
-	var records []*ENSVerificationRecord
+	var records []*VerificationRecord
 
 	for _, details := range ensResponse {
 		pk := "0x" + details.PublicKeyString

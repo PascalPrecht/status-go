@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-type ENSVerificationRecord struct {
+type VerificationRecord struct {
 	PublicKey           string
 	Name                string
 	Clock               uint64
@@ -16,10 +16,10 @@ type ENSVerificationRecord struct {
 }
 
 // We calculate if it's too early to retry, by exponentially backing off
-func (e *ENSVerificationRecord) CalculateNextRetry() {
+func (e *VerificationRecord) CalculateNextRetry() {
 	e.NextRetry = e.VerifiedAt + ENSBackoffTimeSec*uint64(math.Exp2(float64(e.VerificationRetries)))
 }
 
-func (e *ENSVerificationRecord) Valid() bool {
+func (e *VerificationRecord) Valid() bool {
 	return e.Name != "" && strings.HasSuffix(e.Name, ".eth") && e.Clock > 0
 }

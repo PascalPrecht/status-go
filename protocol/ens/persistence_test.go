@@ -22,7 +22,7 @@ func TestGetENSToBeVerified(t *testing.T) {
 	persistence := NewPersistence(db)
 	require.NotNil(t, persistence)
 
-	record := ENSVerificationRecord{Name: name, PublicKey: pk, Clock: 2}
+	record := VerificationRecord{Name: name, PublicKey: pk, Clock: 2}
 
 	// We add a record, it should be nil
 	response, err := persistence.AddRecord(record)
@@ -73,7 +73,7 @@ func TestGetENSToBeVerified(t *testing.T) {
 	record.NextRetry = 20
 	record.VerifiedAt = 30
 
-	err = persistence.UpdateRecords([]*ENSVerificationRecord{&record})
+	err = persistence.UpdateRecords([]*VerificationRecord{&record})
 	require.NoError(t, err)
 
 	toBeVerified, err := persistence.GetENSToBeVerified(20)

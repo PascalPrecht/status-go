@@ -7,7 +7,7 @@ import (
 )
 
 func TestNextRetry(t *testing.T) {
-	record := ENSVerificationRecord{Name: "vitalik.eth"}
+	record := VerificationRecord{Name: "vitalik.eth"}
 	record.VerifiedAt = 10
 	record.CalculateNextRetry()
 

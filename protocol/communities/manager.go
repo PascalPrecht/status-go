@@ -20,7 +20,7 @@ import (
 
 type Manager struct {
 	persistence     *Persistence
-	ensSubscription chan []*ens.ENSVerificationRecord
+	ensSubscription chan []*ens.VerificationRecord
 	subscriptions   []chan *Subscription
 	ensVerifier     *ens.Verifier
 	identity        *ecdsa.PublicKey

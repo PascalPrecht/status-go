@@ -14,15 +14,15 @@ func NewPersistence(db *sql.DB) *Persistence {
 	return &Persistence{db: db}
 }
 
-func (p *Persistence) GetENSToBeVerified(now uint64) ([]*ENSVerificationRecord, error) {
+func (p *Persistence) GetENSToBeVerified(now uint64) ([]*VerificationRecord, error) {
 	rows, err := p.db.Query(`SELECT public_key, name, verified, verified_at, clock, verification_retries, next_retry FROM ens_verification_records WHERE NOT(verified) AND verification_retries < ? AND next_retry <= ?`, maxRetries, now)
 	if err != nil {
 		return nil, err
 	}
 
-	var records []*ENSVerificationRecord
+	var records []*VerificationRecord
 	for rows.Next() {
-		var record ENSVerificationRecord
+		var record VerificationRecord
 		err := rows.Scan(&record.PublicKey, &record.Name, &record.Verified, &record.VerifiedAt, &record.Clock, &record.VerificationRetries, &record.NextRetry)
 		if err != nil {
 			return nil, err
@@ -33,7 +33,7 @@ func (p *Persistence) GetENSToBeVerified(now uint64) ([]*ENSVerificationRecord, 
 	return records, nil
 }
 
-func (p *Persistence) UpdateRecords(records []*ENSVerificationRecord) (err error) {
+func (p *Persistence) UpdateRecords(records []*VerificationRecord) (err error) {
 	var tx *sql.Tx
 	tx, err = p.db.BeginTx(context.Background(), &sql.TxOptions{})
 	if err != nil {
@@ -68,7 +68,7 @@ func (p *Persistence) UpdateRecords(records []*ENSVerificationRecord) (err error
 
 // AddRecord adds a record or return the latest available if already in the database and
 // hasn't changed
-func (p *Persistence) AddRecord(record ENSVerificationRecord) (response *ENSVerificationRecord, err error) {
+func (p *Persistence) AddRecord(record VerificationRecord) (response *VerificationRecord, err error) {
 	if !record.Valid() {
 		err = errors.New("invalid ens record")
 		return
@@ -88,7 +88,7 @@ func (p *Persistence) AddRecord(record ENSVerificationRecord) (response *ENSVeri
 		_ = tx.Rollback()
 	}()
 
-	dbRecord := &ENSVerificationRecord{PublicKey: record.PublicKey}
+	dbRecord := &VerificationRecord{PublicKey: record.PublicKey}
 
 	err = tx.QueryRow(`SELECT name, clock, verified FROM ens_verification_records WHERE public_key = ?`, record.PublicKey).Scan(&dbRecord.Name, &dbRecord.Clock, &dbRecord.Verified)
 	if err != nil && err != sql.ErrNoRows {

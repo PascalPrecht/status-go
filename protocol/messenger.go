@@ -805,7 +805,7 @@ func (m *Messenger) handleEncryptionLayerSubscriptions(subscriptions *encryption
 	}()
 }
 
-func (m *Messenger) handleENSVerified(records []*ens.ENSVerificationRecord) {
+func (m *Messenger) handleENSVerified(records []*ens.VerificationRecord) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
@@ -840,7 +840,7 @@ func (m *Messenger) handleENSVerified(records []*ens.ENSVerificationRecord) {
 
 }
 
-func (m *Messenger) handleENSVerificationSubscription(c chan []*ens.ENSVerificationRecord) {
+func (m *Messenger) handleENSVerificationSubscription(c chan []*ens.VerificationRecord) {
 	go func() {
 		for {
 			select {

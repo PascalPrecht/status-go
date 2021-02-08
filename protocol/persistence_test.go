@@ -611,7 +611,7 @@ func TestSaveChat(t *testing.T) {
 
 	retrievedChat, err := p.Chat(chat.ID)
 	require.NoError(t, err)
-	require.Equal(t, &chat, retrievedChat)
+	require.Equal(t, chat, retrievedChat)
 }
 
 func TestSaveMentions(t *testing.T) {

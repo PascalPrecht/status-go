@@ -41,7 +41,11 @@ func (m *Messenger) CreateOneToOneChat(request *requests.CreateOneToOneChat) (*M
 		chat = CreateOneToOneChat(chatID, pk, m.getTimesource())
 	}
 	chat.Active = true
+
 	filters, err := m.Join(chat)
+	if err != nil {
+		return nil, err
+	}
 
 	err = m.saveChat(chat)
 	if err != nil {

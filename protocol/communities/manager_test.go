@@ -25,6 +25,7 @@ type ManagerSuite struct {
 
 func (s *ManagerSuite) SetupTest() {
 	db, err := sqlite.OpenInMemory()
+	s.Require().NoError(err)
 	key, err := crypto.GenerateKey()
 	s.Require().NoError(err)
 	s.Require().NoError(err)
