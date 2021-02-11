@@ -144,8 +144,7 @@ func (m *MessageHandler) HandleMembershipUpdate(messageState *ReceivedMessageSta
 
 	// Store in chats map as it might be a new one
 	messageState.AllChats[chat.ID] = chat
-	// Set in the map
-	messageState.ModifiedChats[chat.ID] = true
+	messageState.Response.AddChat(chat)
 
 	if message.Message != nil {
 		messageState.CurrentMessageState.Message = *message.Message
@@ -205,7 +204,7 @@ func (m *MessageHandler) handleCommandMessage(state *ReceivedMessageState, messa
 	// Set chat active
 	chat.Active = true
 	// Set in the modified maps chat
-	state.ModifiedChats[chat.ID] = true
+	state.Response.AddChat(chat)
 	state.AllChats[chat.ID] = chat
 
 	// Add to response
@@ -262,7 +261,7 @@ func (m *MessageHandler) HandleSyncInstallationPublicChat(state *ReceivedMessage
 	chat := CreatePublicChat(chatID, state.Timesource)
 
 	state.AllChats[chat.ID] = chat
-	state.ModifiedChats[chat.ID] = true
+	state.Response.AddChat(chat)
 
 	return true
 }
@@ -297,7 +296,7 @@ func (m *MessageHandler) HandleContactUpdate(state *ReceivedMessageState, messag
 		chat.LastClockValue = message.Clock
 	}
 
-	state.ModifiedChats[chat.ID] = true
+	state.Response.AddChat(chat)
 	state.AllChats[chat.ID] = chat
 
 	return nil
@@ -329,12 +328,15 @@ func (m *MessageHandler) HandlePairInstallation(state *ReceivedMessageState, mes
 
 // HandleCommunityDescription handles an community description
 func (m *MessageHandler) HandleCommunityDescription(state *ReceivedMessageState, signer *ecdsa.PublicKey, description protobuf.CommunityDescription, rawPayload []byte) error {
-	community, err := m.communitiesManager.HandleCommunityDescriptionMessage(signer, &description, rawPayload)
+	communityResponse, err := m.communitiesManager.HandleCommunityDescriptionMessage(signer, &description, rawPayload)
 	if err != nil {
 		return err
 	}
 
-	state.AllCommunities[community.IDString()] = community
+	community := communityResponse.Community
+
+	state.Response.AddCommunity(community)
+	state.Response.CommunityChanges = append(state.Response.CommunityChanges, communityResponse.Changes)
 
 	// If we haven't joined the org, nothing to do
 	if !community.Joined() {
@@ -352,12 +354,12 @@ func (m *MessageHandler) HandleCommunityDescription(state *ReceivedMessageState,
 			// Beware, don't use the reference in the range (i.e chat) as it's a shallow copy
 			state.AllChats[chat.ID] = chats[i]
 
-			state.ModifiedChats[chat.ID] = true
+			state.Response.AddChat(chat)
 			chatIDs = append(chatIDs, chat.ID)
 			// Update name, currently is the only field is mutable
 		} else if oldChat.Name != chat.Name {
 			state.AllChats[chat.ID].Name = chat.Name
-			state.ModifiedChats[chat.ID] = true
+			state.Response.AddChat(chat)
 		}
 	}
 
@@ -388,11 +390,15 @@ func (m *MessageHandler) HandleCommunityInvitation(state *ReceivedMessageState, 
 		return errors.New("invitation not for us")
 	}
 
-	community, err := m.communitiesManager.HandleCommunityInvitation(signer, &invitation, rawPayload)
+	communityResponse, err := m.communitiesManager.HandleCommunityInvitation(signer, &invitation, rawPayload)
 	if err != nil {
 		return err
 	}
-	state.AllCommunities[community.IDString()] = community
+
+	community := communityResponse.Community
+
+	state.Response.AddCommunity(community)
+	state.Response.CommunityChanges = append(state.Response.CommunityChanges, communityResponse.Changes)
 
 	return nil
 }
@@ -413,8 +419,8 @@ func (m *MessageHandler) HandleCommunityRequestToJoin(state *ReceivedMessageStat
 	return nil
 }
 
-// HandleWrappedCommunityDescriptionMessage handles a wrapped community description
-func (m *MessageHandler) HandleWrappedCommunityDescriptionMessage(payload []byte) (*communities.Community, error) {
+// handleWrappedCommunityDescriptionMessage handles a wrapped community description
+func (m *MessageHandler) handleWrappedCommunityDescriptionMessage(payload []byte) (*communities.CommunityResponse, error) {
 	return m.communitiesManager.HandleWrappedCommunityDescriptionMessage(payload)
 }
 
@@ -485,7 +491,7 @@ func (m *MessageHandler) HandleChatMessage(state *ReceivedMessageState) error {
 	// Set chat active
 	chat.Active = true
 	// Set in the modified maps chat
-	state.ModifiedChats[chat.ID] = true
+	state.Response.AddChat(chat)
 	state.AllChats[chat.ID] = chat
 
 	contact := state.CurrentMessageState.Contact
@@ -505,13 +511,15 @@ func (m *MessageHandler) HandleChatMessage(state *ReceivedMessageState) error {
 	if receivedMessage.ContentType == protobuf.ChatMessage_COMMUNITY {
 		m.logger.Debug("Handling community content type")
 
-		community, err := m.HandleWrappedCommunityDescriptionMessage(receivedMessage.GetCommunity())
+		communityResponse, err := m.handleWrappedCommunityDescriptionMessage(receivedMessage.GetCommunity())
 		if err != nil {
 			return err
 		}
+		community := communityResponse.Community
 		receivedMessage.CommunityID = community.IDString()
 
-		state.AllCommunities[community.IDString()] = community
+		state.Response.AddCommunity(community)
+		state.Response.CommunityChanges = append(state.Response.CommunityChanges, communityResponse.Changes)
 	}
 	// Add to response
 	state.Response.Messages = append(state.Response.Messages, receivedMessage)
@@ -897,7 +905,7 @@ func (m *MessageHandler) HandleEmojiReaction(state *ReceivedMessageState, pbEmoj
 		chat.LastClockValue = pbEmojiR.Clock
 	}
 
-	state.ModifiedChats[chat.ID] = true
+	state.Response.AddChat(chat)
 	state.AllChats[chat.ID] = chat
 
 	// save emoji reaction

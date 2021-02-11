@@ -466,9 +466,9 @@ func (s *MessengerSuite) TestSendPrivateOneToOne() {
 func (s *MessengerSuite) TestSendPrivateGroup() {
 	response, err := s.m.CreateGroupChatWithMembers(context.Background(), "test", []string{})
 	s.NoError(err)
-	s.Require().Len(response.Chats, 1)
+	s.Require().Len(response.Chats(), 1)
 
-	chat := response.Chats[0]
+	chat := response.Chats()[0]
 	key, err := crypto.GenerateKey()
 	s.NoError(err)
 	members := []string{"0x" + hex.EncodeToString(crypto.FromECDSAPub(&key.PublicKey))}
@@ -499,9 +499,9 @@ func (s *MessengerSuite) TestSendPrivateGroup() {
 func (s *MessengerSuite) TestSendPrivateEmptyGroup() {
 	response, err := s.m.CreateGroupChatWithMembers(context.Background(), "test", []string{})
 	s.NoError(err)
-	s.Require().Len(response.Chats, 1)
+	s.Require().Len(response.Chats(), 1)
 
-	chat := response.Chats[0]
+	chat := response.Chats()[0]
 
 	inputMessage := &common.Message{}
 	inputMessage.ChatId = chat.ID
@@ -548,8 +548,8 @@ func (s *MessengerSuite) TestRetrieveOwnPublic() {
 	s.True(textMessage.RTL)
 	s.Equal(1, textMessage.LineCount)
 
-	s.Require().Len(response.Chats, 1)
-	actualChat := response.Chats[0]
+	s.Require().Len(response.Chats(), 1)
+	actualChat := response.Chats()[0]
 	// It does not set the unviewed messages count
 	s.Require().Equal(uint(0), actualChat.UnviewedMessagesCount)
 	// It updates the last message clock value
@@ -591,8 +591,8 @@ func (s *MessengerSuite) TestRetrieveTheirPublic() {
 	s.Require().NoError(err)
 
 	s.Require().Len(response.Messages, 1)
-	s.Require().Len(response.Chats, 1)
-	actualChat := response.Chats[0]
+	s.Require().Len(response.Chats(), 1)
+	actualChat := response.Chats()[0]
 	// It sets the unviewed messages count
 	s.Require().Equal(uint(1), actualChat.UnviewedMessagesCount)
 	// It updates the last message clock value
@@ -706,8 +706,8 @@ func (s *MessengerSuite) TestResendPublicMessage() {
 	s.Require().NoError(err)
 
 	s.Require().Len(response.Messages, 1)
-	s.Require().Len(response.Chats, 1)
-	actualChat := response.Chats[0]
+	s.Require().Len(response.Chats(), 1)
+	actualChat := response.Chats()[0]
 	// It sets the unviewed messages count
 	s.Require().Equal(uint(1), actualChat.UnviewedMessagesCount)
 	// It updates the last message clock value
@@ -757,8 +757,8 @@ func (s *MessengerSuite) TestRetrieveTheirPrivateChatExisting() {
 	)
 	s.Require().NoError(err)
 
-	s.Require().Equal(len(response.Chats), 1)
-	actualChat := response.Chats[0]
+	s.Require().Equal(len(response.Chats()), 1)
+	actualChat := response.Chats()[0]
 	// It updates the unviewed messages count
 	s.Require().Equal(uint(2), actualChat.UnviewedMessagesCount)
 	// It updates the last message clock value
@@ -795,8 +795,8 @@ func (s *MessengerSuite) TestRetrieveTheirPrivateChatNonExisting() {
 
 	s.Require().NoError(err)
 
-	s.Require().Len(response.Chats, 1)
-	actualChat := response.Chats[0]
+	s.Require().Len(response.Chats(), 1)
+	actualChat := response.Chats()[0]
 	// It updates the unviewed messages count
 	s.Require().Equal(uint(1), actualChat.UnviewedMessagesCount)
 	// It updates the last message clock value
@@ -828,7 +828,7 @@ func (s *MessengerSuite) TestRetrieveTheirPublicChatNonExisting() {
 	s.NoError(err)
 
 	s.Require().Equal(len(response.Messages), 0)
-	s.Require().Equal(len(response.Chats), 0)
+	s.Require().Equal(len(response.Chats()), 0)
 	s.Require().NoError(theirMessenger.Shutdown())
 }
 
@@ -840,9 +840,9 @@ func (s *MessengerSuite) TestRetrieveTheirPrivateGroupChat() {
 	s.Require().NoError(err)
 	response, err = s.m.CreateGroupChatWithMembers(context.Background(), "id", []string{})
 	s.NoError(err)
-	s.Require().Len(response.Chats, 1)
+	s.Require().Len(response.Chats(), 1)
 
-	ourChat := response.Chats[0]
+	ourChat := response.Chats()[0]
 
 	err = s.m.SaveChat(ourChat)
 	s.NoError(err)
@@ -854,7 +854,7 @@ func (s *MessengerSuite) TestRetrieveTheirPrivateGroupChat() {
 	// Retrieve their messages so that the chat is created
 	_, err = WaitOnMessengerResponse(
 		theirMessenger,
-		func(r *MessengerResponse) bool { return len(r.Chats) > 0 },
+		func(r *MessengerResponse) bool { return len(r.Chats()) > 0 },
 		"chat invitation not received",
 	)
 	s.Require().NoError(err)
@@ -865,7 +865,7 @@ func (s *MessengerSuite) TestRetrieveTheirPrivateGroupChat() {
 	// Wait for the message to reach its destination
 	_, err = WaitOnMessengerResponse(
 		s.m,
-		func(r *MessengerResponse) bool { return len(r.Chats) > 0 },
+		func(r *MessengerResponse) bool { return len(r.Chats()) > 0 },
 		"no joining group event received",
 	)
 	s.Require().NoError(err)
@@ -885,8 +885,8 @@ func (s *MessengerSuite) TestRetrieveTheirPrivateGroupChat() {
 	)
 	s.Require().NoError(err)
 
-	s.Require().Len(response.Chats, 1)
-	actualChat := response.Chats[0]
+	s.Require().Len(response.Chats(), 1)
+	actualChat := response.Chats()[0]
 	// It updates the unviewed messages count
 	s.Require().Equal(uint(1), actualChat.UnviewedMessagesCount)
 	// It updates the last message clock value
@@ -903,9 +903,9 @@ func (s *MessengerSuite) TestChangeNameGroupChat() {
 	s.Require().NoError(err)
 	response, err = s.m.CreateGroupChatWithMembers(context.Background(), "old-name", []string{})
 	s.NoError(err)
-	s.Require().Len(response.Chats, 1)
+	s.Require().Len(response.Chats(), 1)
 
-	ourChat := response.Chats[0]
+	ourChat := response.Chats()[0]
 
 	err = s.m.SaveChat(ourChat)
 	s.NoError(err)
@@ -917,7 +917,7 @@ func (s *MessengerSuite) TestChangeNameGroupChat() {
 	// Retrieve their messages so that the chat is created
 	_, err = WaitOnMessengerResponse(
 		theirMessenger,
-		func(r *MessengerResponse) bool { return len(r.Chats) > 0 },
+		func(r *MessengerResponse) bool { return len(r.Chats()) > 0 },
 		"chat invitation not received",
 	)
 	s.Require().NoError(err)
@@ -928,7 +928,7 @@ func (s *MessengerSuite) TestChangeNameGroupChat() {
 	// Wait for join group event
 	_, err = WaitOnMessengerResponse(
 		s.m,
-		func(r *MessengerResponse) bool { return len(r.Chats) > 0 },
+		func(r *MessengerResponse) bool { return len(r.Chats()) > 0 },
 		"no joining group event received",
 	)
 	s.Require().NoError(err)
@@ -939,13 +939,13 @@ func (s *MessengerSuite) TestChangeNameGroupChat() {
 	// Retrieve their messages so that the chat is created
 	response, err = WaitOnMessengerResponse(
 		theirMessenger,
-		func(r *MessengerResponse) bool { return len(r.Chats) > 0 },
+		func(r *MessengerResponse) bool { return len(r.Chats()) > 0 },
 		"chat invitation not received",
 	)
 	s.Require().NoError(err)
 
-	s.Require().Len(response.Chats, 1)
-	actualChat := response.Chats[0]
+	s.Require().Len(response.Chats(), 1)
+	actualChat := response.Chats()[0]
 	s.Require().Equal(newName, actualChat.Name)
 	s.Require().NoError(theirMessenger.Shutdown())
 }
@@ -958,9 +958,9 @@ func (s *MessengerSuite) TestReInvitedToGroupChat() {
 	s.Require().NoError(err)
 	response, err = s.m.CreateGroupChatWithMembers(context.Background(), "old-name", []string{})
 	s.NoError(err)
-	s.Require().Len(response.Chats, 1)
+	s.Require().Len(response.Chats(), 1)
 
-	ourChat := response.Chats[0]
+	ourChat := response.Chats()[0]
 
 	err = s.m.SaveChat(ourChat)
 	s.NoError(err)
@@ -972,7 +972,7 @@ func (s *MessengerSuite) TestReInvitedToGroupChat() {
 	// Retrieve their messages so that the chat is created
 	_, err = WaitOnMessengerResponse(
 		theirMessenger,
-		func(r *MessengerResponse) bool { return len(r.Chats) > 0 },
+		func(r *MessengerResponse) bool { return len(r.Chats()) > 0 },
 		"chat invitation not received",
 	)
 	s.Require().NoError(err)
@@ -983,7 +983,7 @@ func (s *MessengerSuite) TestReInvitedToGroupChat() {
 	// Wait for join group event
 	_, err = WaitOnMessengerResponse(
 		s.m,
-		func(r *MessengerResponse) bool { return len(r.Chats) > 0 },
+		func(r *MessengerResponse) bool { return len(r.Chats()) > 0 },
 		"no joining group event received",
 	)
 	s.Require().NoError(err)
@@ -991,13 +991,13 @@ func (s *MessengerSuite) TestReInvitedToGroupChat() {
 	response, err = theirMessenger.LeaveGroupChat(context.Background(), ourChat.ID, true)
 	s.NoError(err)
 
-	s.Require().Len(response.Chats, 1)
-	s.Require().False(response.Chats[0].Active)
+	s.Require().Len(response.Chats(), 1)
+	s.Require().False(response.Chats()[0].Active)
 
 	// Retrieve messages so user is removed
 	_, err = WaitOnMessengerResponse(
 		s.m,
-		func(r *MessengerResponse) bool { return len(r.Chats) > 0 && len(r.Chats[0].Members) == 1 },
+		func(r *MessengerResponse) bool { return len(r.Chats()) > 0 && len(r.Chats()[0].Members) == 1 },
 		"leave group chat not received",
 	)
 
@@ -1010,14 +1010,14 @@ func (s *MessengerSuite) TestReInvitedToGroupChat() {
 	// Retrieve their messages so that the chat is created
 	response, err = WaitOnMessengerResponse(
 		theirMessenger,
-		func(r *MessengerResponse) bool { return len(r.Chats) > 0 },
+		func(r *MessengerResponse) bool { return len(r.Chats()) > 0 },
 		"chat invitation not received",
 	)
 
 	s.Require().NoError(err)
 
-	s.Require().Len(response.Chats, 1)
-	s.Require().True(response.Chats[0].Active)
+	s.Require().Len(response.Chats(), 1)
+	s.Require().True(response.Chats()[0].Active)
 	s.Require().NoError(theirMessenger.Shutdown())
 }
 
@@ -1476,9 +1476,9 @@ func (s *MessengerSuite) TestCreateGroupChatWithMembers() {
 	members := []string{testPK}
 	response, err := s.m.CreateGroupChatWithMembers(context.Background(), "test", members)
 	s.NoError(err)
-	s.Require().Len(response.Chats, 1)
+	s.Require().Len(response.Chats(), 1)
 
-	chat := response.Chats[0]
+	chat := response.Chats()[0]
 
 	s.Require().Equal("test", chat.Name)
 	publicKeyHex := "0x" + hex.EncodeToString(crypto.FromECDSAPub(&s.m.identity.PublicKey))
@@ -1490,9 +1490,9 @@ func (s *MessengerSuite) TestCreateGroupChatWithMembers() {
 func (s *MessengerSuite) TestAddMembersToChat() {
 	response, err := s.m.CreateGroupChatWithMembers(context.Background(), "test", []string{})
 	s.Require().NoError(err)
-	s.Require().Len(response.Chats, 1)
+	s.Require().Len(response.Chats(), 1)
 
-	chat := response.Chats[0]
+	chat := response.Chats()[0]
 
 	key, err := crypto.GenerateKey()
 	s.Require().NoError(err)
@@ -1500,10 +1500,10 @@ func (s *MessengerSuite) TestAddMembersToChat() {
 
 	response, err = s.m.AddMembersToGroupChat(context.Background(), chat.ID, members)
 	s.Require().NoError(err)
-	s.Require().Len(response.Chats, 1)
+	s.Require().Len(response.Chats(), 1)
 	s.Require().Len(response.Messages, 1)
 
-	chat = response.Chats[0]
+	chat = response.Chats()[0]
 
 	publicKeyHex := "0x" + hex.EncodeToString(crypto.FromECDSAPub(&s.m.identity.PublicKey))
 	keyHex := "0x" + hex.EncodeToString(crypto.FromECDSAPub(&key.PublicKey))
@@ -1527,7 +1527,7 @@ func (s *MessengerSuite) TestDeclineRequestAddressForTransaction() {
 	response, err := s.m.RequestAddressForTransaction(context.Background(), theirPkString, myAddress.Hex(), value, contract)
 	s.Require().NoError(err)
 	s.Require().NotNil(response)
-	s.Require().Len(response.Chats, 1)
+	s.Require().Len(response.Chats(), 1)
 	s.Require().Len(response.Messages, 1)
 
 	senderMessage := response.Messages[0]
@@ -1550,7 +1550,7 @@ func (s *MessengerSuite) TestDeclineRequestAddressForTransaction() {
 	s.Require().NoError(err)
 
 	s.Require().NotNil(response)
-	s.Require().Len(response.Chats, 1)
+	s.Require().Len(response.Chats(), 1)
 	s.Require().Len(response.Messages, 1)
 
 	receiverMessage := response.Messages[0]
@@ -1565,7 +1565,7 @@ func (s *MessengerSuite) TestDeclineRequestAddressForTransaction() {
 	// We decline the request
 	response, err = theirMessenger.DeclineRequestAddressForTransaction(context.Background(), receiverMessage.ID)
 	s.Require().NoError(err)
-	s.Require().Len(response.Chats, 1)
+	s.Require().Len(response.Chats(), 1)
 	s.Require().Len(response.Messages, 1)
 
 	senderMessage = response.Messages[0]
@@ -1586,7 +1586,7 @@ func (s *MessengerSuite) TestDeclineRequestAddressForTransaction() {
 	)
 	s.Require().NoError(err)
 
-	s.Require().Len(response.Chats, 1)
+	s.Require().Len(response.Chats(), 1)
 	s.Require().Len(response.Messages, 1)
 
 	receiverMessage = response.Messages[0]
@@ -1624,7 +1624,7 @@ func (s *MessengerSuite) TestSendEthTransaction() {
 	response, err := s.m.SendTransaction(context.Background(), theirPkString, value, contract, transactionHash, signature)
 	s.Require().NoError(err)
 	s.Require().NotNil(response)
-	s.Require().Len(response.Chats, 1)
+	s.Require().Len(response.Chats(), 1)
 	s.Require().Len(response.Messages, 1)
 
 	senderMessage := response.Messages[0]
@@ -1686,7 +1686,7 @@ func (s *MessengerSuite) TestSendEthTransaction() {
 	s.Require().NoError(err)
 
 	s.Require().NotNil(response)
-	s.Require().Len(response.Chats, 1)
+	s.Require().Len(response.Chats(), 1)
 	s.Require().Len(response.Messages, 1)
 
 	receiverMessage := response.Messages[0]
@@ -1728,7 +1728,7 @@ func (s *MessengerSuite) TestSendTokenTransaction() {
 	response, err := s.m.SendTransaction(context.Background(), theirPkString, value, contract, transactionHash, signature)
 	s.Require().NoError(err)
 	s.Require().NotNil(response)
-	s.Require().Len(response.Chats, 1)
+	s.Require().Len(response.Chats(), 1)
 	s.Require().Len(response.Messages, 1)
 
 	senderMessage := response.Messages[0]
@@ -1790,7 +1790,7 @@ func (s *MessengerSuite) TestSendTokenTransaction() {
 	s.Require().NoError(err)
 
 	s.Require().NotNil(response)
-	s.Require().Len(response.Chats, 1)
+	s.Require().Len(response.Chats(), 1)
 	s.Require().Len(response.Messages, 1)
 
 	receiverMessage := response.Messages[0]
@@ -1826,7 +1826,7 @@ func (s *MessengerSuite) TestAcceptRequestAddressForTransaction() {
 	response, err := s.m.RequestAddressForTransaction(context.Background(), theirPkString, myAddress.Hex(), value, contract)
 	s.Require().NoError(err)
 	s.Require().NotNil(response)
-	s.Require().Len(response.Chats, 1)
+	s.Require().Len(response.Chats(), 1)
 	s.Require().Len(response.Messages, 1)
 
 	senderMessage := response.Messages[0]
@@ -1849,7 +1849,7 @@ func (s *MessengerSuite) TestAcceptRequestAddressForTransaction() {
 	s.Require().NoError(err)
 
 	s.Require().NotNil(response)
-	s.Require().Len(response.Chats, 1)
+	s.Require().Len(response.Chats(), 1)
 	s.Require().Len(response.Messages, 1)
 
 	receiverMessage := response.Messages[0]
@@ -1864,7 +1864,7 @@ func (s *MessengerSuite) TestAcceptRequestAddressForTransaction() {
 	// We accept the request
 	response, err = theirMessenger.AcceptRequestAddressForTransaction(context.Background(), receiverMessage.ID, "some-address")
 	s.Require().NoError(err)
-	s.Require().Len(response.Chats, 1)
+	s.Require().Len(response.Chats(), 1)
 	s.Require().Len(response.Messages, 1)
 
 	senderMessage = response.Messages[0]
@@ -1886,7 +1886,7 @@ func (s *MessengerSuite) TestAcceptRequestAddressForTransaction() {
 	)
 	s.Require().NoError(err)
 
-	s.Require().Len(response.Chats, 1)
+	s.Require().Len(response.Chats(), 1)
 	s.Require().Len(response.Messages, 1)
 
 	receiverMessage = response.Messages[0]
@@ -1919,7 +1919,7 @@ func (s *MessengerSuite) TestDeclineRequestTransaction() {
 	response, err := s.m.RequestTransaction(context.Background(), theirPkString, value, contract, receiverAddressString)
 	s.Require().NoError(err)
 	s.Require().NotNil(response)
-	s.Require().Len(response.Chats, 1)
+	s.Require().Len(response.Chats(), 1)
 	s.Require().Len(response.Messages, 1)
 
 	senderMessage := response.Messages[0]
@@ -1943,7 +1943,7 @@ func (s *MessengerSuite) TestDeclineRequestTransaction() {
 	s.Require().NoError(err)
 
 	s.Require().NotNil(response)
-	s.Require().Len(response.Chats, 1)
+	s.Require().Len(response.Chats(), 1)
 	s.Require().Len(response.Messages, 1)
 
 	receiverMessage := response.Messages[0]
@@ -1959,7 +1959,7 @@ func (s *MessengerSuite) TestDeclineRequestTransaction() {
 	response, err = theirMessenger.DeclineRequestTransaction(context.Background(), initialCommandID)
 	s.Require().NoError(err)
 	s.Require().NotNil(response)
-	s.Require().Len(response.Chats, 1)
+	s.Require().Len(response.Chats(), 1)
 	s.Require().Len(response.Messages, 1)
 
 	senderMessage = response.Messages[0]
@@ -1979,7 +1979,7 @@ func (s *MessengerSuite) TestDeclineRequestTransaction() {
 	s.Require().NoError(err)
 
 	s.Require().NotNil(response)
-	s.Require().Len(response.Chats, 1)
+	s.Require().Len(response.Chats(), 1)
 	s.Require().Len(response.Messages, 1)
 
 	receiverMessage = response.Messages[0]
@@ -2009,7 +2009,7 @@ func (s *MessengerSuite) TestRequestTransaction() {
 	response, err := s.m.RequestTransaction(context.Background(), theirPkString, value, contract, receiverAddressString)
 	s.Require().NoError(err)
 	s.Require().NotNil(response)
-	s.Require().Len(response.Chats, 1)
+	s.Require().Len(response.Chats(), 1)
 	s.Require().Len(response.Messages, 1)
 
 	senderMessage := response.Messages[0]
@@ -2033,7 +2033,7 @@ func (s *MessengerSuite) TestRequestTransaction() {
 	s.Require().NoError(err)
 
 	s.Require().NotNil(response)
-	s.Require().Len(response.Chats, 1)
+	s.Require().Len(response.Chats(), 1)
 	s.Require().Len(response.Messages, 1)
 
 	receiverMessage := response.Messages[0]
@@ -2052,7 +2052,7 @@ func (s *MessengerSuite) TestRequestTransaction() {
 	response, err = theirMessenger.AcceptRequestTransaction(context.Background(), transactionHash, initialCommandID, signature)
 	s.Require().NoError(err)
 	s.Require().NotNil(response)
-	s.Require().Len(response.Chats, 1)
+	s.Require().Len(response.Chats(), 1)
 	s.Require().Len(response.Messages, 1)
 
 	senderMessage = response.Messages[0]
@@ -2119,7 +2119,7 @@ func (s *MessengerSuite) TestRequestTransaction() {
 	s.Require().NoError(err)
 
 	s.Require().NotNil(response)
-	s.Require().Len(response.Chats, 1)
+	s.Require().Len(response.Chats(), 1)
 	s.Require().Len(response.Messages, 1)
 
 	receiverMessage = response.Messages[0]

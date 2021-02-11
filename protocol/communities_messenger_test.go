@@ -107,8 +107,8 @@ func (s *MessengerCommunitiesSuite) TestRetrieveCommunity() {
 	response, err := s.bob.CreateCommunity(description)
 	s.Require().NoError(err)
 	s.Require().NotNil(response)
-	s.Require().Len(response.Communities, 1)
-	community := response.Communities[0]
+	s.Require().Len(response.Communities(), 1)
+	community := response.Communities()[0]
 
 	// Send an community message
 	chat := CreateOneToOneChat(common.PubkeyToHex(&alice.identity.PublicKey), &alice.identity.PublicKey, s.alice.transport)
@@ -129,7 +129,7 @@ func (s *MessengerCommunitiesSuite) TestRetrieveCommunity() {
 		if err != nil {
 			return err
 		}
-		if len(response.Communities) == 0 {
+		if len(response.Communities()) == 0 {
 			return errors.New("community not received")
 		}
 		return nil
@@ -139,7 +139,7 @@ func (s *MessengerCommunitiesSuite) TestRetrieveCommunity() {
 	communities, err := alice.Communities()
 	s.Require().NoError(err)
 	s.Require().Len(communities, 2)
-	s.Require().Len(response.Communities, 1)
+	s.Require().Len(response.Communities(), 1)
 	s.Require().Len(response.Messages, 1)
 	s.Require().Equal(community.IDString(), response.Messages[0].CommunityID)
 }
@@ -156,9 +156,9 @@ func (s *MessengerCommunitiesSuite) TestJoinCommunity() {
 	response, err := s.bob.CreateCommunity(description)
 	s.Require().NoError(err)
 	s.Require().NotNil(response)
-	s.Require().Len(response.Communities, 1)
+	s.Require().Len(response.Communities(), 1)
 
-	community := response.Communities[0]
+	community := response.Communities()[0]
 
 	orgChat := &protobuf.CommunityChat{
 		Permissions: &protobuf.CommunityPermissions{
@@ -172,10 +172,10 @@ func (s *MessengerCommunitiesSuite) TestJoinCommunity() {
 	response, err = s.bob.CreateCommunityChat(community.ID(), orgChat)
 	s.Require().NoError(err)
 	s.Require().NotNil(response)
-	s.Require().Len(response.Communities, 1)
-	s.Require().Len(response.Chats, 1)
+	s.Require().Len(response.Communities(), 1)
+	s.Require().Len(response.Chats(), 1)
 
-	createdChat := response.Chats[0]
+	createdChat := response.Chats()[0]
 	s.Require().Equal(community.IDString(), createdChat.CommunityID)
 	s.Require().Equal(orgChat.Identity.DisplayName, createdChat.Name)
 	s.Require().NotEmpty(createdChat.ID)
@@ -185,7 +185,7 @@ func (s *MessengerCommunitiesSuite) TestJoinCommunity() {
 	s.Require().True(strings.HasPrefix(createdChat.ID, community.IDString()))
 
 	// Make sure the changes are reflect in the community
-	community = response.Communities[0]
+	community = response.Communities()[0]
 	chats := community.Chats()
 	s.Require().Len(chats, 1)
 
@@ -208,7 +208,7 @@ func (s *MessengerCommunitiesSuite) TestJoinCommunity() {
 		if err != nil {
 			return err
 		}
-		if len(response.Communities) == 0 {
+		if len(response.Communities()) == 0 {
 			return errors.New("community not received")
 		}
 		return nil
@@ -218,7 +218,7 @@ func (s *MessengerCommunitiesSuite) TestJoinCommunity() {
 	communities, err := s.alice.Communities()
 	s.Require().NoError(err)
 	s.Require().Len(communities, 2)
-	s.Require().Len(response.Communities, 1)
+	s.Require().Len(response.Communities(), 1)
 	s.Require().Len(response.Messages, 1)
 	s.Require().Equal(community.IDString(), response.Messages[0].CommunityID)
 
@@ -226,12 +226,12 @@ func (s *MessengerCommunitiesSuite) TestJoinCommunity() {
 	response, err = s.alice.JoinCommunity(community.ID())
 	s.Require().NoError(err)
 	s.Require().NotNil(response)
-	s.Require().Len(response.Communities, 1)
-	s.Require().True(response.Communities[0].Joined())
-	s.Require().Len(response.Chats, 1)
+	s.Require().Len(response.Communities(), 1)
+	s.Require().True(response.Communities()[0].Joined())
+	s.Require().Len(response.Chats(), 1)
 
 	// The chat should be created
-	createdChat = response.Chats[0]
+	createdChat = response.Chats()[0]
 	s.Require().Equal(community.IDString(), createdChat.CommunityID)
 	s.Require().Equal(orgChat.Identity.DisplayName, createdChat.Name)
 	s.Require().NotEmpty(createdChat.ID)
@@ -253,8 +253,8 @@ func (s *MessengerCommunitiesSuite) TestJoinCommunity() {
 	response, err = s.bob.CreateCommunityChat(community.ID(), orgChat)
 	s.Require().NoError(err)
 	s.Require().NotNil(response)
-	s.Require().Len(response.Communities, 1)
-	s.Require().Len(response.Chats, 1)
+	s.Require().Len(response.Communities(), 1)
+	s.Require().Len(response.Chats(), 1)
 
 	// Pull message, this time it should be received as advertised automatically
 	err = tt.RetryWithBackOff(func() error {
@@ -262,7 +262,7 @@ func (s *MessengerCommunitiesSuite) TestJoinCommunity() {
 		if err != nil {
 			return err
 		}
-		if len(response.Communities) == 0 {
+		if len(response.Communities()) == 0 {
 			return errors.New("community not received")
 		}
 		return nil
@@ -272,11 +272,11 @@ func (s *MessengerCommunitiesSuite) TestJoinCommunity() {
 	communities, err = s.alice.Communities()
 	s.Require().NoError(err)
 	s.Require().Len(communities, 2)
-	s.Require().Len(response.Communities, 1)
-	s.Require().Len(response.Chats, 1)
+	s.Require().Len(response.Communities(), 1)
+	s.Require().Len(response.Chats(), 1)
 
 	// The chat should be created
-	createdChat = response.Chats[0]
+	createdChat = response.Chats()[0]
 	s.Require().Equal(community.IDString(), createdChat.CommunityID)
 	s.Require().Equal(orgChat.Identity.DisplayName, createdChat.Name)
 	s.Require().NotEmpty(createdChat.ID)
@@ -289,9 +289,9 @@ func (s *MessengerCommunitiesSuite) TestJoinCommunity() {
 	response, err = s.alice.LeaveCommunity(community.ID())
 	s.Require().NoError(err)
 	s.Require().NotNil(response)
-	s.Require().Len(response.Communities, 1)
-	s.Require().False(response.Communities[0].Joined())
-	s.Require().Len(response.RemovedChats, 2)
+	s.Require().Len(response.Communities(), 1)
+	s.Require().False(response.Communities()[0].Joined())
+	s.Require().Len(response.RemovedChats(), 2)
 }
 
 func (s *MessengerCommunitiesSuite) TestInviteUsersToCommunity() {
@@ -305,9 +305,9 @@ func (s *MessengerCommunitiesSuite) TestInviteUsersToCommunity() {
 	response, err := s.bob.CreateCommunity(description)
 	s.Require().NoError(err)
 	s.Require().NotNil(response)
-	s.Require().Len(response.Communities, 1)
+	s.Require().Len(response.Communities(), 1)
 
-	community := response.Communities[0]
+	community := response.Communities()[0]
 
 	response, err = s.bob.InviteUsersToCommunity(
 		&requests.InviteUsersToCommunity{
@@ -317,9 +317,9 @@ func (s *MessengerCommunitiesSuite) TestInviteUsersToCommunity() {
 	)
 	s.Require().NoError(err)
 	s.Require().NotNil(response)
-	s.Require().Len(response.Communities, 1)
+	s.Require().Len(response.Communities(), 1)
 
-	community = response.Communities[0]
+	community = response.Communities()[0]
 	s.Require().True(community.HasMember(&s.alice.identity.PublicKey))
 
 	// Pull message and make sure org is received
@@ -328,7 +328,7 @@ func (s *MessengerCommunitiesSuite) TestInviteUsersToCommunity() {
 		if err != nil {
 			return err
 		}
-		if len(response.Communities) == 0 {
+		if len(response.Communities()) == 0 {
 			return errors.New("community not received")
 		}
 		return nil
@@ -338,9 +338,9 @@ func (s *MessengerCommunitiesSuite) TestInviteUsersToCommunity() {
 	communities, err := s.alice.Communities()
 	s.Require().NoError(err)
 	s.Require().Len(communities, 2)
-	s.Require().Len(response.Communities, 1)
+	s.Require().Len(response.Communities(), 1)
 
-	community = response.Communities[0]
+	community = response.Communities()[0]
 	s.Require().True(community.HasMember(&s.alice.identity.PublicKey))
 }
 
@@ -355,9 +355,9 @@ func (s *MessengerCommunitiesSuite) TestPostToCommunityChat() {
 	response, err := s.bob.CreateCommunity(description)
 	s.Require().NoError(err)
 	s.Require().NotNil(response)
-	s.Require().Len(response.Communities, 1)
+	s.Require().Len(response.Communities(), 1)
 
-	community := response.Communities[0]
+	community := response.Communities()[0]
 
 	// Create chat
 	orgChat := &protobuf.CommunityChat{
@@ -373,8 +373,8 @@ func (s *MessengerCommunitiesSuite) TestPostToCommunityChat() {
 	response, err = s.bob.CreateCommunityChat(community.ID(), orgChat)
 	s.Require().NoError(err)
 	s.Require().NotNil(response)
-	s.Require().Len(response.Communities, 1)
-	s.Require().Len(response.Chats, 1)
+	s.Require().Len(response.Communities(), 1)
+	s.Require().Len(response.Chats(), 1)
 
 	response, err = s.bob.InviteUsersToCommunity(
 		&requests.InviteUsersToCommunity{
@@ -384,9 +384,9 @@ func (s *MessengerCommunitiesSuite) TestPostToCommunityChat() {
 	)
 	s.Require().NoError(err)
 	s.Require().NotNil(response)
-	s.Require().Len(response.Communities, 1)
+	s.Require().Len(response.Communities(), 1)
 
-	community = response.Communities[0]
+	community = response.Communities()[0]
 	s.Require().True(community.HasMember(&s.alice.identity.PublicKey))
 
 	// Pull message and make sure org is received
@@ -395,7 +395,7 @@ func (s *MessengerCommunitiesSuite) TestPostToCommunityChat() {
 		if err != nil {
 			return err
 		}
-		if len(response.Communities) == 0 {
+		if len(response.Communities()) == 0 {
 			return errors.New("community not received")
 		}
 		return nil
@@ -405,29 +405,29 @@ func (s *MessengerCommunitiesSuite) TestPostToCommunityChat() {
 	communities, err := s.alice.Communities()
 	s.Require().NoError(err)
 	s.Require().Len(communities, 2)
-	s.Require().Len(response.Communities, 1)
+	s.Require().Len(response.Communities(), 1)
 
 	// We join the org
 	response, err = s.alice.JoinCommunity(community.ID())
 	s.Require().NoError(err)
 	s.Require().NotNil(response)
-	s.Require().Len(response.Communities, 1)
-	s.Require().True(response.Communities[0].Joined())
-	s.Require().Len(response.Chats, 1)
+	s.Require().Len(response.Communities(), 1)
+	s.Require().True(response.Communities()[0].Joined())
+	s.Require().Len(response.Chats(), 1)
 	s.Require().Len(response.Filters, 2)
 
 	var orgFilterFound bool
 	var chatFilterFound bool
 	for _, f := range response.Filters {
-		orgFilterFound = orgFilterFound || f.ChatID == response.Communities[0].IDString()
-		chatFilterFound = chatFilterFound || f.ChatID == response.Chats[0].ID
+		orgFilterFound = orgFilterFound || f.ChatID == response.Communities()[0].IDString()
+		chatFilterFound = chatFilterFound || f.ChatID == response.Chats()[0].ID
 	}
 	// Make sure an community filter has been created
 	s.Require().True(orgFilterFound)
 	// Make sure the chat filter has been created
 	s.Require().True(chatFilterFound)
 
-	chatID := response.Chats[0].ID
+	chatID := response.Chats()[0].ID
 	inputMessage := &common.Message{}
 	inputMessage.ChatId = chatID
 	inputMessage.ContentType = protobuf.ChatMessage_TEXT_PLAIN
@@ -450,8 +450,8 @@ func (s *MessengerCommunitiesSuite) TestPostToCommunityChat() {
 
 	s.Require().NoError(err)
 	s.Require().Len(response.Messages, 1)
-	s.Require().Len(response.Chats, 1)
-	s.Require().Equal(chatID, response.Chats[0].ID)
+	s.Require().Len(response.Chats(), 1)
+	s.Require().Equal(chatID, response.Chats()[0].ID)
 }
 
 func (s *MessengerCommunitiesSuite) TestImportCommunity() {
@@ -465,11 +465,9 @@ func (s *MessengerCommunitiesSuite) TestImportCommunity() {
 	response, err := s.bob.CreateCommunity(description)
 	s.Require().NoError(err)
 	s.Require().NotNil(response)
-	s.Require().Len(response.Communities, 1)
+	s.Require().Len(response.Communities(), 1)
 
-	s.bob.logger.Info("communitise", zap.Any("COMM", response.Communities))
-
-	community := response.Communities[0]
+	community := response.Communities()[0]
 
 	privateKey, err := s.bob.ExportCommunity(community.ID())
 	s.Require().NoError(err)
@@ -496,15 +494,15 @@ func (s *MessengerCommunitiesSuite) TestImportCommunity() {
 		if err != nil {
 			return err
 		}
-		if len(response.Communities) == 0 {
+		if len(response.Communities()) == 0 {
 			return errors.New("community not received")
 		}
 		return nil
 	})
 
 	s.Require().NoError(err)
-	s.Require().Len(response.Communities, 1)
-	community = response.Communities[0]
+	s.Require().Len(response.Communities(), 1)
+	community = response.Communities()[0]
 	s.Require().True(community.Joined())
 	s.Require().True(community.IsAdmin())
 }
@@ -520,9 +518,9 @@ func (s *MessengerCommunitiesSuite) TestRequestAccess() {
 	response, err := s.bob.CreateCommunity(description)
 	s.Require().NoError(err)
 	s.Require().NotNil(response)
-	s.Require().Len(response.Communities, 1)
+	s.Require().Len(response.Communities(), 1)
 
-	community := response.Communities[0]
+	community := response.Communities()[0]
 
 	chat := CreateOneToOneChat(common.PubkeyToHex(&s.alice.identity.PublicKey), &s.alice.identity.PublicKey, s.alice.transport)
 
@@ -542,7 +540,7 @@ func (s *MessengerCommunitiesSuite) TestRequestAccess() {
 		if err != nil {
 			return err
 		}
-		if len(response.Communities) == 0 {
+		if len(response.Communities()) == 0 {
 			return errors.New("message not received")
 		}
 		return nil
@@ -569,8 +567,8 @@ func (s *MessengerCommunitiesSuite) TestRequestAccess() {
 	// Make sure clock is not empty
 	s.Require().NotEmpty(requestToJoin1.Clock)
 
-	s.Require().Len(response.Communities, 1)
-	s.Require().Equal(response.Communities[0].RequestedToJoinAt(), requestToJoin1.Clock)
+	s.Require().Len(response.Communities(), 1)
+	s.Require().Equal(response.Communities()[0].RequestedToJoinAt(), requestToJoin1.Clock)
 
 	// pull all communities to make sure we set RequestedToJoinAt
 
@@ -628,9 +626,9 @@ func (s *MessengerCommunitiesSuite) TestRequestAccess() {
 	s.Require().NoError(err)
 	s.Require().NotNil(response)
 
-	s.Require().Len(response.Communities, 1)
+	s.Require().Len(response.Communities(), 1)
 
-	updatedCommunity := response.Communities[0]
+	updatedCommunity := response.Communities()[0]
 
 	s.Require().NotNil(updatedCommunity)
 	s.Require().True(updatedCommunity.HasMember(&s.alice.identity.PublicKey))
@@ -641,7 +639,7 @@ func (s *MessengerCommunitiesSuite) TestRequestAccess() {
 		if err != nil {
 			return err
 		}
-		if len(response.Communities) == 0 {
+		if len(response.Communities()) == 0 {
 			return errors.New("community not received")
 		}
 		return nil
@@ -649,12 +647,16 @@ func (s *MessengerCommunitiesSuite) TestRequestAccess() {
 
 	s.Require().NoError(err)
 	s.Require().NotNil(response)
-	s.Require().Len(response.Communities, 1)
 
-	aliceCommunity := response.Communities[0]
+	s.Require().Len(response.Communities(), 1)
+
+	aliceCommunity := response.Communities()[0]
 
 	s.Require().Equal(community.ID(), aliceCommunity.ID())
 	s.Require().True(aliceCommunity.HasMember(&s.alice.identity.PublicKey))
+
+	// Community should be joined at this point
+	s.Require().True(aliceCommunity.Joined())
 
 	// Make sure the requests are not pending on either sides
 	requestsToJoin, err = s.bob.PendingRequestsToJoinForCommunity(community.ID())
@@ -678,9 +680,9 @@ func (s *MessengerCommunitiesSuite) TestShareCommunity() {
 	response, err := s.bob.CreateCommunity(description)
 	s.Require().NoError(err)
 	s.Require().NotNil(response)
-	s.Require().Len(response.Communities, 1)
+	s.Require().Len(response.Communities(), 1)
 
-	community := response.Communities[0]
+	community := response.Communities()[0]
 
 	response, err = s.bob.ShareCommunity(
 		&requests.ShareCommunity{

@@ -26,6 +26,7 @@ type Config struct {
 	MarshaledCommunityDescription []byte
 	ID                            *ecdsa.PublicKey
 	Joined                        bool
+	Requested                     bool
 	Verified                      bool
 	Logger                        *zap.Logger
 	RequestedToJoinAt             uint64
@@ -142,16 +143,42 @@ type CommunityChatChanges struct {
 }
 
 type CommunityChanges struct {
-	MembersAdded   map[string]*protobuf.CommunityMember
-	MembersRemoved map[string]*protobuf.CommunityMember
+	Community      *Community                           `json:"community"`
+	MembersAdded   map[string]*protobuf.CommunityMember `json:"membersAdded"`
+	MembersRemoved map[string]*protobuf.CommunityMember `json:"membersRemoved"`
 
-	ChatsRemoved  map[string]*protobuf.CommunityChat
-	ChatsAdded    map[string]*protobuf.CommunityChat
-	ChatsModified map[string]*CommunityChatChanges
+	ChatsRemoved  map[string]*protobuf.CommunityChat `json:"chatsRemoved"`
+	ChatsAdded    map[string]*protobuf.CommunityChat `json:"chatsAdded"`
+	ChatsModified map[string]*CommunityChatChanges   `json:"chatsModified"`
+
+	// ShouldMemberJoin indicates whether the user should join this community
+	// automatically
+	ShouldMemberJoin bool `json:"memberAdded"`
+
+	// ShouldMemberJoin indicates whether the user should leave this community
+	// automatically
+	ShouldMemberLeave bool `json:"memberRemoved"`
 }
 
-func emptyCommunityChanges() *CommunityChanges {
+func (c *CommunityChanges) HasNewMember(identity string) bool {
+	if len(c.MembersAdded) == 0 {
+		return false
+	}
+	_, ok := c.MembersAdded[identity]
+	return ok
+}
+
+func (c *CommunityChanges) HasMemberLeft(identity string) bool {
+	if len(c.MembersRemoved) == 0 {
+		return false
+	}
+	_, ok := c.MembersRemoved[identity]
+	return ok
+}
+
+func (o *Community) emptyCommunityChanges() *CommunityChanges {
 	return &CommunityChanges{
+		Community:      o,
 		MembersAdded:   make(map[string]*protobuf.CommunityMember),
 		MembersRemoved: make(map[string]*protobuf.CommunityMember),
 
@@ -185,7 +212,7 @@ func (o *Community) CreateChat(chatID string, chat *protobuf.CommunityChat) (*Co
 
 	o.increaseClock()
 
-	changes := emptyCommunityChanges()
+	changes := o.emptyCommunityChanges()
 	changes.ChatsAdded[chatID] = chat
 	return changes, nil
 }
@@ -380,6 +407,8 @@ func (o *Community) RemoveUserFromOrg(pk *ecdsa.PublicKey) (*protobuf.CommunityD
 		delete(chat.Members, key)
 	}
 
+	o.increaseClock()
+
 	return o.config.CommunityDescription, nil
 }
 
@@ -419,14 +448,14 @@ func (o *Community) HandleCommunityDescription(signer *ecdsa.PublicKey, descript
 		return nil, err
 	}
 
-	response := emptyCommunityChanges()
+	response := o.emptyCommunityChanges()
 
 	if description.Clock <= o.config.CommunityDescription.Clock {
 		return response, nil
 	}
 
-	// We only calculate changes if we joined the org, otherwise not interested
-	if o.config.Joined {
+	// We only calculate changes if we joined the community or we requested access, otherwise not interested
+	if o.config.Joined || o.config.RequestedToJoinAt > 0 {
 		// Check for new members at the org level
 		for pk, member := range description.Members {
 			if _, ok := o.config.CommunityDescription.Members[pk]; !ok {
@@ -559,6 +588,14 @@ func (o *Community) handleRequestToJoinWithChatID(request *protobuf.CommunityReq
 	}
 
 	return nil
+}
+
+func (o *Community) OnRequest() bool {
+	return o.config.CommunityDescription.Permissions.Access == protobuf.CommunityPermissions_ON_REQUEST
+}
+
+func (o *Community) InvitationOnly() bool {
+	return o.config.CommunityDescription.Permissions.Access == protobuf.CommunityPermissions_INVITATION_ONLY
 }
 
 func (o *Community) handleRequestToJoinWithoutChatID(request *protobuf.CommunityRequestToJoin) error {

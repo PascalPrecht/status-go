@@ -72,7 +72,7 @@ func (m *Messenger) AddContact(ctx context.Context, pubKey string) (*MessengerRe
 	}
 
 	response.Filters = filters
-	response.Chats = append(response.Chats, profileChat)
+	response.AddChat(profileChat)
 
 	publicKey, err := contact.PublicKey()
 	if err != nil {
@@ -290,7 +290,7 @@ func (m *Messenger) sendContactUpdate(ctx context.Context, chatID, ensName, prof
 	}
 
 	response.Contacts = []*Contact{contact}
-	response.Chats = []*Chat{chat}
+	response.AddChat(chat)
 
 	chat.LastClockValue = clock
 	err = m.saveChat(chat)

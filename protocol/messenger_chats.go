@@ -54,10 +54,12 @@ func (m *Messenger) CreateOneToOneChat(request *requests.CreateOneToOneChat) (*M
 
 	m.allChats[chatID] = chat
 
-	return &MessengerResponse{
+	response := &MessengerResponse{
 		Filters: filters,
-		Chats:   []*Chat{chat},
-	}, nil
+	}
+	response.AddChat(chat)
+
+	return response, nil
 
 }
 
@@ -65,6 +67,10 @@ func (m *Messenger) DeleteChat(chatID string) error {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
+	return m.deleteChat(chatID)
+}
+
+func (m *Messenger) deleteChat(chatID string) error {
 	err := m.persistence.DeleteChat(chatID)
 	if err != nil {
 		return err
@@ -117,7 +123,7 @@ func (m *Messenger) deactivateChat(chatID string) (*MessengerResponse, error) {
 
 	m.allChats[chatID] = chat
 
-	response.Chats = []*Chat{chat}
+	response.AddChat(chat)
 	// TODO: Remove filters
 
 	return &response, nil

@@ -3,6 +3,7 @@ package communities
 import (
 	"crypto/ecdsa"
 	"database/sql"
+	"time"
 
 	"github.com/golang/protobuf/proto"
 
@@ -63,6 +64,11 @@ func NewManager(identity *ecdsa.PublicKey, db *sql.DB, logger *zap.Logger, verif
 type Subscription struct {
 	Community   *Community
 	Invitations []*protobuf.CommunityInvitation
+}
+
+type CommunityResponse struct {
+	Community *Community        `json:"community"`
+	Changes   *CommunityChanges `json:"changes"`
 }
 
 func (m *Manager) Subscribe() chan *Subscription {
@@ -242,7 +248,7 @@ func (m *Manager) CreateChat(communityID types.HexBytes, chat *protobuf.Communit
 	return community, changes, nil
 }
 
-func (m *Manager) HandleCommunityDescriptionMessage(signer *ecdsa.PublicKey, description *protobuf.CommunityDescription, payload []byte) (*Community, error) {
+func (m *Manager) HandleCommunityDescriptionMessage(signer *ecdsa.PublicKey, description *protobuf.CommunityDescription, payload []byte) (*CommunityResponse, error) {
 	id := crypto.CompressPubkey(signer)
 	community, err := m.persistence.GetByID(m.identity, id)
 	if err != nil {
@@ -264,9 +270,29 @@ func (m *Manager) HandleCommunityDescriptionMessage(signer *ecdsa.PublicKey, des
 		}
 	}
 
-	_, err = community.HandleCommunityDescription(signer, description, payload)
+	changes, err := community.HandleCommunityDescription(signer, description, payload)
 	if err != nil {
 		return nil, err
+	}
+
+	pkString := common.PubkeyToHex(m.identity)
+
+	// If the community require membership, we set whether we should leave/join the community after a state change
+	if community.InvitationOnly() || community.OnRequest() {
+		if changes.HasNewMember(pkString) {
+			hasPendingRequest, err := m.persistence.HasPendingRequestsToJoinForUserAndCommunity(pkString, changes.Community.ID())
+			if err != nil {
+				return nil, err
+			}
+			// If there's any pending request, we should join the community
+			// automatically
+			changes.ShouldMemberJoin = hasPendingRequest
+		}
+
+		if changes.HasMemberLeft(pkString) {
+			// If we joined previously the community, we should leave it
+			changes.ShouldMemberLeave = community.Joined()
+		}
 	}
 
 	err = m.persistence.SaveCommunity(community)
@@ -279,12 +305,16 @@ func (m *Manager) HandleCommunityDescriptionMessage(signer *ecdsa.PublicKey, des
 	if err := m.markRequestToJoin(m.identity, community); err != nil {
 		return nil, err
 	}
+	// Check if there's a change and we should be joining
 
-	return community, nil
+	return &CommunityResponse{
+		Community: community,
+		Changes:   changes,
+	}, nil
 }
 
 // TODO: Finish implementing this
-func (m *Manager) HandleCommunityInvitation(signer *ecdsa.PublicKey, invitation *protobuf.CommunityInvitation, payload []byte) (*Community, error) {
+func (m *Manager) HandleCommunityInvitation(signer *ecdsa.PublicKey, invitation *protobuf.CommunityInvitation, payload []byte) (*CommunityResponse, error) {
 	m.logger.Debug("Handling wrapped community description message")
 
 	community, err := m.HandleWrappedCommunityDescriptionMessage(payload)
@@ -300,9 +330,7 @@ func (m *Manager) HandleCommunityInvitation(signer *ecdsa.PublicKey, invitation 
 // markRequestToJoin marks all the pending requests to join as completed
 // if we are members
 func (m *Manager) markRequestToJoin(pk *ecdsa.PublicKey, community *Community) error {
-	m.logger.Debug("Checking if needs to be marked", zap.Any("identity", m.identity))
 	if community.HasMember(pk) {
-		m.logger.Debug("makring if needs to be marked")
 		return m.persistence.SetRequestToJoinState(common.PubkeyToHex(pk), community.ID(), RequestToJoinStateAccepted)
 	}
 	return nil
@@ -367,7 +395,7 @@ func (m *Manager) HandleCommunityRequestToJoin(signer *ecdsa.PublicKey, request 
 	return requestToJoin, nil
 }
 
-func (m *Manager) HandleWrappedCommunityDescriptionMessage(payload []byte) (*Community, error) {
+func (m *Manager) HandleWrappedCommunityDescriptionMessage(payload []byte) (*CommunityResponse, error) {
 	m.logger.Debug("Handling wrapped community description message")
 
 	applicationMetadataMessage := &protobuf.ApplicationMetadataMessage{}
@@ -519,7 +547,7 @@ func (m *Manager) RequestToJoin(requester *ecdsa.PublicKey, request *requests.Re
 	if err := m.persistence.SaveRequestToJoin(requestToJoin); err != nil {
 		return nil, nil, err
 	}
-	community.config.RequestedToJoinAt = clock
+	community.config.RequestedToJoinAt = uint64(time.Now().Unix())
 
 	return community, requestToJoin, nil
 }

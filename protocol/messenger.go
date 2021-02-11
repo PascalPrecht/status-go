@@ -1249,7 +1249,7 @@ func (m *Messenger) CreateGroupChatWithMembers(ctx context.Context, name string,
 
 	chat.updateChatFromGroupMembershipChanges(contactIDFromPublicKey(&m.identity.PublicKey), group)
 
-	response.Chats = []*Chat{&chat}
+	response.AddChat(&chat)
 	response.Messages = buildSystemMessages(chat.MembershipUpdates, m.systemMessagesTranslations)
 	err = m.persistence.SaveMessages(response.Messages)
 	if err != nil {
@@ -1271,7 +1271,7 @@ func (m *Messenger) CreateGroupChatFromInvitation(name string, chatID string, ad
 	chat.Name = name
 	chat.InvitationAdmin = adminPK
 
-	response.Chats = []*Chat{&chat}
+	response.AddChat(&chat)
 
 	return &response, m.saveChat(&chat)
 }
@@ -1330,7 +1330,7 @@ func (m *Messenger) RemoveMemberFromGroupChat(ctx context.Context, chatID string
 
 	chat.updateChatFromGroupMembershipChanges(contactIDFromPublicKey(&m.identity.PublicKey), group)
 
-	response.Chats = []*Chat{chat}
+	response.AddChat(chat)
 	response.Messages = buildSystemMessages(chat.MembershipUpdates, m.systemMessagesTranslations)
 	err = m.persistence.SaveMessages(response.Messages)
 	if err != nil {
@@ -1419,7 +1419,7 @@ func (m *Messenger) AddMembersToGroupChat(ctx context.Context, chatID string, me
 
 	chat.updateChatFromGroupMembershipChanges(contactIDFromPublicKey(&m.identity.PublicKey), group)
 
-	response.Chats = []*Chat{chat}
+	response.AddChat(chat)
 	response.Messages = buildSystemMessages([]v1protocol.MembershipUpdateEvent{event}, m.systemMessagesTranslations)
 	err = m.persistence.SaveMessages(response.Messages)
 	if err != nil {
@@ -1484,7 +1484,7 @@ func (m *Messenger) ChangeGroupChatName(ctx context.Context, chatID string, name
 	chat.updateChatFromGroupMembershipChanges(contactIDFromPublicKey(&m.identity.PublicKey), group)
 
 	var response MessengerResponse
-	response.Chats = []*Chat{chat}
+	response.AddChat(chat)
 	response.Messages = buildSystemMessages([]v1protocol.MembershipUpdateEvent{event}, m.systemMessagesTranslations)
 	err = m.persistence.SaveMessages(response.Messages)
 	if err != nil {
@@ -1693,7 +1693,7 @@ func (m *Messenger) AddAdminsToGroupChat(ctx context.Context, chatID string, mem
 
 	chat.updateChatFromGroupMembershipChanges(contactIDFromPublicKey(&m.identity.PublicKey), group)
 
-	response.Chats = []*Chat{chat}
+	response.AddChat(chat)
 	response.Messages = buildSystemMessages([]v1protocol.MembershipUpdateEvent{event}, m.systemMessagesTranslations)
 	err = m.persistence.SaveMessages(response.Messages)
 	if err != nil {
@@ -1759,7 +1759,7 @@ func (m *Messenger) ConfirmJoiningGroup(ctx context.Context, chatID string) (*Me
 
 	chat.updateChatFromGroupMembershipChanges(contactIDFromPublicKey(&m.identity.PublicKey), group)
 
-	response.Chats = []*Chat{chat}
+	response.AddChat(chat)
 	response.Messages = buildSystemMessages([]v1protocol.MembershipUpdateEvent{event}, m.systemMessagesTranslations)
 	err = m.persistence.SaveMessages(response.Messages)
 	if err != nil {
@@ -1830,7 +1830,7 @@ func (m *Messenger) LeaveGroupChat(ctx context.Context, chatID string, remove bo
 		chat.Active = false
 	}
 
-	response.Chats = []*Chat{chat}
+	response.AddChat(chat)
 	response.Messages = buildSystemMessages([]v1protocol.MembershipUpdateEvent{event}, m.systemMessagesTranslations)
 	err = m.persistence.SaveMessages(response.Messages)
 	if err != nil {
@@ -2193,7 +2193,7 @@ func (m *Messenger) sendChatMessage(ctx context.Context, message *common.Message
 		return nil, err
 	}
 
-	response.Chats = []*Chat{chat}
+	response.AddChat(chat)
 	return &response, m.saveChat(chat)
 }
 
@@ -2277,7 +2277,7 @@ func (m *Messenger) SendPairInstallation(ctx context.Context) (*MessengerRespons
 		return nil, err
 	}
 
-	response.Chats = []*Chat{chat}
+	response.AddChat(chat)
 
 	chat.LastClockValue = clock
 	err = m.saveChat(chat)
@@ -2400,8 +2400,7 @@ type ReceivedMessageState struct {
 	CurrentMessageState *CurrentMessageState
 	// AllChats in memory
 	AllChats map[string]*Chat
-	// List of chats modified
-	ModifiedChats map[string]bool
+
 	// All contacts in memory
 	AllContacts map[string]*Contact
 	// List of contacts modified
@@ -2410,8 +2409,6 @@ type ReceivedMessageState struct {
 	AllInstallations map[string]*multidevice.Installation
 	// List of communities modified
 	ModifiedInstallations map[string]bool
-	// List of communities
-	AllCommunities map[string]*communities.Community
 	// List of filters
 	AllFilters map[string]*transport.Filter
 	// Map of existing messages
@@ -2484,14 +2481,12 @@ func (m *Messenger) handleRetrievedMessages(chatWithMessages map[transport.Filte
 	defer m.mutex.Unlock()
 	messageState := &ReceivedMessageState{
 		AllChats:              m.allChats,
-		ModifiedChats:         make(map[string]bool),
 		AllContacts:           m.allContacts,
 		ModifiedContacts:      make(map[string]bool),
 		AllInstallations:      m.allInstallations,
 		ModifiedInstallations: m.modifiedInstallations,
 		ExistingMessagesMap:   make(map[string]bool),
 		EmojiReactions:        make(map[string]*EmojiReaction),
-		AllCommunities:        make(map[string]*communities.Community),
 		AllFilters:            make(map[string]*transport.Filter),
 		GroupChatInvitations:  make(map[string]*GroupChatInvitation),
 		Response:              &MessengerResponse{},
@@ -2872,6 +2867,39 @@ func (m *Messenger) handleRetrievedMessages(chatWithMessages map[transport.Filte
 				}
 			}
 
+			// Process any community changes
+			for _, changes := range messageState.Response.CommunityChanges {
+				if changes.ShouldMemberJoin {
+					response, err := m.joinCommunity(changes.Community.ID())
+					if err != nil {
+						logger.Error("cannot join community", zap.Error(err))
+						continue
+					}
+
+					if err := messageState.Response.Merge(response); err != nil {
+						logger.Error("cannot merge join community response", zap.Error(err))
+						continue
+					}
+
+				} else if changes.ShouldMemberLeave {
+					response, err := m.leaveCommunity(changes.Community.ID())
+					if err != nil {
+						logger.Error("cannot join community", zap.Error(err))
+						continue
+					}
+
+					if err := messageState.Response.Merge(response); err != nil {
+						logger.Error("cannot merge join community response", zap.Error(err))
+						continue
+
+					}
+
+				}
+			}
+
+			// Clean up as not used by clients currently
+			messageState.Response.CommunityChanges = nil
+
 			if allMessagesProcessed {
 				processedMessages = append(processedMessages, types.EncodeHex(shhMessage.Hash))
 			}
@@ -2898,15 +2926,12 @@ func (m *Messenger) handleRetrievedMessages(chatWithMessages map[transport.Filte
 		}
 	}
 
-	for _, community := range messageState.AllCommunities {
-		messageState.Response.Communities = append(messageState.Response.Communities, community)
-	}
-
 	for _, filter := range messageState.AllFilters {
 		messageState.Response.Filters = append(messageState.Response.Filters, filter)
 	}
 
-	for id := range messageState.ModifiedChats {
+	// Hydrate chat alias and identicon
+	for id := range messageState.Response.chats {
 		chat := messageState.AllChats[id]
 		if chat.OneToOne() {
 			contact, ok := m.allContacts[chat.ID]
@@ -2916,7 +2941,7 @@ func (m *Messenger) handleRetrievedMessages(chatWithMessages map[transport.Filte
 			}
 		}
 
-		messageState.Response.Chats = append(messageState.Response.Chats, chat)
+		messageState.Response.AddChat(chat)
 	}
 
 	for id := range messageState.ModifiedInstallations {
@@ -2931,12 +2956,13 @@ func (m *Messenger) handleRetrievedMessages(chatWithMessages map[transport.Filte
 	}
 
 	var err error
-	if len(messageState.Response.Chats) > 0 {
-		err = m.saveChats(messageState.Response.Chats)
+	if len(messageState.Response.chats) > 0 {
+		err = m.saveChats(messageState.Response.Chats())
 		if err != nil {
 			return nil, err
 		}
 	}
+
 	if len(messageState.Response.Messages) > 0 {
 		err = m.SaveMessages(messageState.Response.Messages)
 		if err != nil {
@@ -3084,7 +3110,8 @@ func (m *Messenger) clearHistory(id string) (*MessengerResponse, error) {
 
 	m.allChats[id] = chat
 
-	response := &MessengerResponse{Chats: []*Chat{chat}}
+	response := &MessengerResponse{}
+	response.AddChat(chat)
 	return response, nil
 }
 
@@ -3253,7 +3280,7 @@ func (m *Messenger) RequestTransaction(ctx context.Context, chatID, value, contr
 		return nil, err
 	}
 
-	response.Chats = []*Chat{chat}
+	response.AddChat(chat)
 	response.Messages = []*common.Message{message}
 	return &response, m.saveChat(chat)
 }
@@ -3330,7 +3357,7 @@ func (m *Messenger) RequestAddressForTransaction(ctx context.Context, chatID, fr
 		return nil, err
 	}
 
-	response.Chats = []*Chat{chat}
+	response.AddChat(chat)
 	response.Messages = []*common.Message{message}
 	return &response, m.saveChat(chat)
 }
@@ -3426,7 +3453,7 @@ func (m *Messenger) AcceptRequestAddressForTransaction(ctx context.Context, mess
 		return nil, err
 	}
 
-	response.Chats = []*Chat{chat}
+	response.AddChat(chat)
 	response.Messages = []*common.Message{message}
 	return &response, m.saveChat(chat)
 }
@@ -3509,7 +3536,7 @@ func (m *Messenger) DeclineRequestTransaction(ctx context.Context, messageID str
 		return nil, err
 	}
 
-	response.Chats = []*Chat{chat}
+	response.AddChat(chat)
 	response.Messages = []*common.Message{message}
 	return &response, m.saveChat(chat)
 }
@@ -3592,7 +3619,7 @@ func (m *Messenger) DeclineRequestAddressForTransaction(ctx context.Context, mes
 		return nil, err
 	}
 
-	response.Chats = []*Chat{chat}
+	response.AddChat(chat)
 	response.Messages = []*common.Message{message}
 	return &response, m.saveChat(chat)
 }
@@ -3692,7 +3719,7 @@ func (m *Messenger) AcceptRequestTransaction(ctx context.Context, transactionHas
 		return nil, err
 	}
 
-	response.Chats = []*Chat{chat}
+	response.AddChat(chat)
 	response.Messages = []*common.Message{message}
 	return &response, m.saveChat(chat)
 }
@@ -3774,7 +3801,7 @@ func (m *Messenger) SendTransaction(ctx context.Context, chatID, value, contract
 		return nil, err
 	}
 
-	response.Chats = []*Chat{chat}
+	response.AddChat(chat)
 	response.Messages = []*common.Message{message}
 	return &response, m.saveChat(chat)
 }
@@ -3785,8 +3812,6 @@ func (m *Messenger) ValidateTransactions(ctx context.Context, addresses []types.
 	}
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
-
-	modifiedChats := make(map[string]bool)
 
 	logger := m.logger.With(zap.String("site", "ValidateTransactions"))
 	logger.Debug("Validating transactions")
@@ -3873,7 +3898,7 @@ func (m *Messenger) ValidateTransactions(ctx context.Context, addresses []types.
 
 		response.Messages = append(response.Messages, message)
 		m.allChats[chat.ID] = chat
-		modifiedChats[chat.ID] = true
+		response.AddChat(chat)
 
 		contact, err := m.getOrBuildContactFromMessage(message)
 		if err != nil {
@@ -3885,9 +3910,6 @@ func (m *Messenger) ValidateTransactions(ctx context.Context, addresses []types.
 			Chat:    m.allChats[message.ChatId],
 		})
 
-	}
-	for id := range modifiedChats {
-		response.Chats = append(response.Chats, m.allChats[id])
 	}
 
 	if len(response.Messages) > 0 {
@@ -4148,7 +4170,7 @@ func (m *Messenger) SendEmojiReaction(ctx context.Context, chatID, messageID str
 	}
 
 	response.EmojiReactions = []*EmojiReaction{emojiR}
-	response.Chats = []*Chat{chat}
+	response.AddChat(chat)
 
 	err = m.persistence.SaveEmojiReaction(emojiR)
 	if err != nil {
@@ -4229,7 +4251,7 @@ func (m *Messenger) SendEmojiReactionRetraction(ctx context.Context, emojiReacti
 	response := MessengerResponse{}
 	emojiR.Retracted = true
 	response.EmojiReactions = []*EmojiReaction{emojiR}
-	response.Chats = []*Chat{chat}
+	response.AddChat(chat)
 
 	// Persist retraction state for emoji reaction
 	err = m.persistence.SaveEmojiReaction(emojiR)
