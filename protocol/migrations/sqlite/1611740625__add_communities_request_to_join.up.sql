@@ -6,7 +6,7 @@ CREATE TABLE communities_requests_to_join  (
   chat_id VARCHAR NOT NULL DEFAULT "",
   community_id BLOB NOT NULL,
   state INT NOT NULL DEFAULT 0,
-  PRIMARY KEY (id)
+  PRIMARY KEY (id) ON CONFLICT REPLACE
 );
 
 

@@ -177,15 +177,9 @@ func (c *CommunityChanges) HasMemberLeft(identity string) bool {
 }
 
 func (o *Community) emptyCommunityChanges() *CommunityChanges {
-	return &CommunityChanges{
-		Community:      o,
-		MembersAdded:   make(map[string]*protobuf.CommunityMember),
-		MembersRemoved: make(map[string]*protobuf.CommunityMember),
-
-		ChatsRemoved:  make(map[string]*protobuf.CommunityChat),
-		ChatsAdded:    make(map[string]*protobuf.CommunityChat),
-		ChatsModified: make(map[string]*CommunityChatChanges),
-	}
+	changes := emptyCommunityChanges()
+	changes.Community = o
+	return changes
 }
 
 func (o *Community) CreateChat(chatID string, chat *protobuf.CommunityChat) (*CommunityChanges, error) {
@@ -891,4 +885,15 @@ func (o *Community) RequestedToJoinAt() uint64 {
 
 func (o *Community) nextClock() uint64 {
 	return o.config.CommunityDescription.Clock + 1
+}
+
+func emptyCommunityChanges() *CommunityChanges {
+	return &CommunityChanges{
+		MembersAdded:   make(map[string]*protobuf.CommunityMember),
+		MembersRemoved: make(map[string]*protobuf.CommunityMember),
+
+		ChatsRemoved:  make(map[string]*protobuf.CommunityChat),
+		ChatsAdded:    make(map[string]*protobuf.CommunityChat),
+		ChatsModified: make(map[string]*CommunityChatChanges),
+	}
 }

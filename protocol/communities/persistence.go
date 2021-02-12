@@ -1,8 +1,10 @@
 package communities
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"database/sql"
+	"errors"
 
 	"github.com/golang/protobuf/proto"
 	"go.uber.org/zap"
@@ -144,8 +146,34 @@ func unmarshalCommunityFromDB(memberIdentity *ecdsa.PublicKey, publicKeyBytes, p
 	return New(config)
 }
 
-func (p *Persistence) SaveRequestToJoin(request *RequestToJoin) error {
-	_, err := p.db.Exec(`INSERT INTO communities_requests_to_join(id,public_key,clock,ens_name,chat_id,community_id,state) VALUES (?, ?, ?, ?, ?, ?, ?)`, request.ID, request.PublicKey, request.Clock, request.ENSName, request.ChatID, request.CommunityID, request.State)
+func (p *Persistence) SaveRequestToJoin(request *RequestToJoin) (err error) {
+	tx, err := p.db.BeginTx(context.Background(), &sql.TxOptions{})
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		if err == nil {
+			err = tx.Commit()
+			return
+		}
+		// don't shadow original error
+		_ = tx.Rollback()
+	}()
+
+	var clock uint64
+	// Fetch any existing request to join
+	err = tx.QueryRow(`SELECT clock FROM communities_requests_to_join WHERE state = ? AND public_key = ? AND community_id = ?`, RequestToJoinStatePending, request.PublicKey, request.CommunityID).Scan(&clock)
+	if err != nil && err != sql.ErrNoRows {
+		return err
+	}
+
+	// This is already processed
+	if clock >= request.Clock {
+		return errors.New("old request to join")
+	}
+
+	_, err = tx.Exec(`INSERT INTO communities_requests_to_join(id,public_key,clock,ens_name,chat_id,community_id,state) VALUES (?, ?, ?, ?, ?, ?, ?)`, request.ID, request.PublicKey, request.Clock, request.ENSName, request.ChatID, request.CommunityID, request.State)
 	return err
 }
 

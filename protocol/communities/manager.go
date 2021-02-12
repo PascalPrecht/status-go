@@ -374,6 +374,11 @@ func (m *Manager) HandleCommunityRequestToJoin(signer *ecdsa.PublicKey, request 
 		return nil, ErrOrgNotFound
 	}
 
+	// If they are already a member, ignore
+	if community.HasMember(signer) {
+		return nil, ErrAlreadyMember
+	}
+
 	if err := community.HandleRequestToJoin(signer, request); err != nil {
 		return nil, err
 	}
@@ -532,7 +537,12 @@ func (m *Manager) RequestToJoin(requester *ecdsa.PublicKey, request *requests.Re
 		return nil, nil, err
 	}
 
-	clock := community.Clock() + 1
+	// We don't allow requesting access if already a member
+	if community.HasMember(m.identity) {
+		return nil, nil, ErrAlreadyMember
+	}
+
+	clock := uint64(time.Now().Unix())
 	requestToJoin := &RequestToJoin{
 		PublicKey:   common.PubkeyToHex(requester),
 		Clock:       clock,

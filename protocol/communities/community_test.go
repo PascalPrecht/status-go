@@ -543,6 +543,10 @@ func (s *CommunitySuite) TestHandleCommunityDescription() {
 
 	signer := &key.PublicKey
 
+	buildChanges := func(c *Community) *CommunityChanges {
+		return c.emptyCommunityChanges()
+	}
+
 	testCases := []struct {
 		name        string
 		description func(*Community) *protobuf.CommunityDescription
@@ -554,14 +558,14 @@ func (s *CommunitySuite) TestHandleCommunityDescription() {
 			name:        "updated version but no changes",
 			description: s.identicalCommunityDescription,
 			signer:      signer,
-			changes:     func(_ *Community) *CommunityChanges { return emptyCommunityChanges() },
+			changes:     buildChanges,
 			err:         nil,
 		},
 		{
 			name:        "updated version but lower clock",
 			description: s.oldCommunityDescription,
 			signer:      signer,
-			changes:     func(_ *Community) *CommunityChanges { return emptyCommunityChanges() },
+			changes:     buildChanges,
 			err:         nil,
 		},
 		{
@@ -569,7 +573,7 @@ func (s *CommunitySuite) TestHandleCommunityDescription() {
 			description: s.removedMemberCommunityDescription,
 			signer:      signer,
 			changes: func(org *Community) *CommunityChanges {
-				changes := emptyCommunityChanges()
+				changes := org.emptyCommunityChanges()
 				changes.MembersRemoved[s.member1Key] = &protobuf.CommunityMember{}
 				changes.ChatsModified[testChatID1] = &CommunityChatChanges{
 					MembersAdded:   make(map[string]*protobuf.CommunityMember),
@@ -586,7 +590,7 @@ func (s *CommunitySuite) TestHandleCommunityDescription() {
 			description: s.addedMemberCommunityDescription,
 			signer:      signer,
 			changes: func(org *Community) *CommunityChanges {
-				changes := emptyCommunityChanges()
+				changes := org.emptyCommunityChanges()
 				changes.MembersAdded[s.member3Key] = &protobuf.CommunityMember{}
 				changes.ChatsModified[testChatID1] = &CommunityChatChanges{
 					MembersAdded:   make(map[string]*protobuf.CommunityMember),
@@ -603,7 +607,7 @@ func (s *CommunitySuite) TestHandleCommunityDescription() {
 			description: s.addedChatCommunityDescription,
 			signer:      signer,
 			changes: func(org *Community) *CommunityChanges {
-				changes := emptyCommunityChanges()
+				changes := org.emptyCommunityChanges()
 				changes.MembersAdded[s.member3Key] = &protobuf.CommunityMember{}
 				changes.ChatsAdded[testChatID2] = &protobuf.CommunityChat{Permissions: &protobuf.CommunityPermissions{Access: protobuf.CommunityPermissions_INVITATION_ONLY}, Members: make(map[string]*protobuf.CommunityMember)}
 				changes.ChatsAdded[testChatID2].Members[s.member3Key] = &protobuf.CommunityMember{}
@@ -617,7 +621,7 @@ func (s *CommunitySuite) TestHandleCommunityDescription() {
 			description: s.removedChatCommunityDescription,
 			signer:      signer,
 			changes: func(org *Community) *CommunityChanges {
-				changes := emptyCommunityChanges()
+				changes := org.emptyCommunityChanges()
 				changes.ChatsRemoved[testChatID1] = org.config.CommunityDescription.Chats[testChatID1]
 
 				return changes
