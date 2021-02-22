@@ -20,3 +20,5 @@ CREATE TABLE ens_verification_records (
   next_retry INT NOT NULL DEFAULT 0,
   PRIMARY KEY (public_key) ON CONFLICT REPLACE
 );
+
+INSERT INTO ens_verification_records (public_key, name, verified, verified_at, clock) SELECT id, name, ens_verified, ens_verified_at, ens_verified_at FROM contacts WHERE ens_verified;
