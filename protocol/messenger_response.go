@@ -97,28 +97,28 @@ func (r *MessengerResponse) Communities() []*communities.Community {
 	return communities
 }
 
-func (m *MessengerResponse) IsEmpty() bool {
-	return len(m.chats)+
-		len(m.Messages)+
-		len(m.Contacts)+
-		len(m.Installations)+
-		len(m.Invitations)+
-		len(m.EmojiReactions)+
-		len(m.communities)+
-		len(m.CommunityChanges)+
-		len(m.Filters)+
-		len(m.RemovedFilters)+
-		len(m.removedChats)+
-		len(m.MailserverTopics)+
-		len(m.Mailservers)+
-		len(m.MailserverRanges)+
-		len(m.Notifications)+
-		len(m.RequestsToJoinCommunity) == 0
+func (r *MessengerResponse) IsEmpty() bool {
+	return len(r.chats)+
+		len(r.Messages)+
+		len(r.Contacts)+
+		len(r.Installations)+
+		len(r.Invitations)+
+		len(r.EmojiReactions)+
+		len(r.communities)+
+		len(r.CommunityChanges)+
+		len(r.Filters)+
+		len(r.RemovedFilters)+
+		len(r.removedChats)+
+		len(r.MailserverTopics)+
+		len(r.Mailservers)+
+		len(r.MailserverRanges)+
+		len(r.Notifications)+
+		len(r.RequestsToJoinCommunity) == 0
 }
 
 // Merge takes another response and appends the new Chats & new Messages and replaces
 // the existing Messages & Chats if they have the same ID
-func (m *MessengerResponse) Merge(response *MessengerResponse) error {
+func (r *MessengerResponse) Merge(response *MessengerResponse) error {
 	if len(response.Contacts)+
 		len(response.Installations)+
 		len(response.EmojiReactions)+
@@ -133,102 +133,102 @@ func (m *MessengerResponse) Merge(response *MessengerResponse) error {
 		return ErrNotImplemented
 	}
 
-	m.AddChats(response.Chats())
-	m.AddRemovedChats(response.RemovedChats())
-	m.overrideMessages(response.Messages)
-	m.overrideFilters(response.Filters)
-	m.overrideRemovedFilters(response.Filters)
-	m.AddCommunities(response.Communities())
+	r.AddChats(response.Chats())
+	r.AddRemovedChats(response.RemovedChats())
+	r.overrideMessages(response.Messages)
+	r.overrideFilters(response.Filters)
+	r.overrideRemovedFilters(response.Filters)
+	r.AddCommunities(response.Communities())
 
 	return nil
 }
 
 // overrideMessages append new messages and override existing ones in response.Messages
-func (m *MessengerResponse) overrideMessages(messages []*common.Message) {
+func (r *MessengerResponse) overrideMessages(messages []*common.Message) {
 	for _, overrideMessage := range messages {
 		var found = false
-		for idx, chat := range m.Messages {
+		for idx, chat := range r.Messages {
 			if chat.ID == overrideMessage.ID {
-				m.Messages[idx] = overrideMessage
+				r.Messages[idx] = overrideMessage
 				found = true
 			}
 		}
 		if !found {
-			m.Messages = append(m.Messages, overrideMessage)
+			r.Messages = append(r.Messages, overrideMessage)
 		}
 	}
 }
 
 // overrideFilters append new filters and override existing ones in response.Filters
-func (m *MessengerResponse) overrideFilters(filters []*transport.Filter) {
+func (r *MessengerResponse) overrideFilters(filters []*transport.Filter) {
 	for _, overrideFilter := range filters {
 		var found = false
-		for idx, filter := range m.Filters {
+		for idx, filter := range r.Filters {
 			if filter.FilterID == overrideFilter.FilterID {
-				m.Filters[idx] = overrideFilter
+				r.Filters[idx] = overrideFilter
 				found = true
 			}
 		}
 		if !found {
-			m.Filters = append(m.Filters, overrideFilter)
+			r.Filters = append(r.Filters, overrideFilter)
 		}
 	}
 }
 
 // overrideRemovedFilters append removed filters and override existing ones in response.Filters
-func (m *MessengerResponse) overrideRemovedFilters(filters []*transport.Filter) {
+func (r *MessengerResponse) overrideRemovedFilters(filters []*transport.Filter) {
 	for _, overrideFilter := range filters {
 		var found = false
-		for idx, filter := range m.RemovedFilters {
+		for idx, filter := range r.RemovedFilters {
 			if filter.FilterID == overrideFilter.FilterID {
-				m.RemovedFilters[idx] = overrideFilter
+				r.RemovedFilters[idx] = overrideFilter
 				found = true
 			}
 		}
 		if !found {
-			m.RemovedFilters = append(m.RemovedFilters, overrideFilter)
+			r.RemovedFilters = append(r.RemovedFilters, overrideFilter)
 		}
 	}
 }
 
-func (m *MessengerResponse) AddCommunities(communities []*communities.Community) {
+func (r *MessengerResponse) AddCommunities(communities []*communities.Community) {
 	for _, overrideCommunity := range communities {
-		m.AddCommunity(overrideCommunity)
+		r.AddCommunity(overrideCommunity)
 	}
 }
 
-func (m *MessengerResponse) AddCommunity(c *communities.Community) {
-	if m.communities == nil {
-		m.communities = make(map[string]*communities.Community)
+func (r *MessengerResponse) AddCommunity(c *communities.Community) {
+	if r.communities == nil {
+		r.communities = make(map[string]*communities.Community)
 	}
 
-	m.communities[c.IDString()] = c
+	r.communities[c.IDString()] = c
 }
 
-func (m *MessengerResponse) AddChat(c *Chat) {
-	if m.chats == nil {
-		m.chats = make(map[string]*Chat)
+func (r *MessengerResponse) AddChat(c *Chat) {
+	if r.chats == nil {
+		r.chats = make(map[string]*Chat)
 	}
 
-	m.chats[c.ID] = c
+	r.chats[c.ID] = c
 }
 
-func (m *MessengerResponse) AddChats(chats []*Chat) {
+func (r *MessengerResponse) AddChats(chats []*Chat) {
 	for _, c := range chats {
-		m.AddChat(c)
+		r.AddChat(c)
 	}
 }
 
-func (m *MessengerResponse) AddRemovedChats(chats []string) {
+func (r *MessengerResponse) AddRemovedChats(chats []string) {
 	for _, c := range chats {
-		m.AddRemovedChat(c)
+		r.AddRemovedChat(c)
 	}
 }
 
-func (m *MessengerResponse) AddRemovedChat(chatID string) {
-	if m.removedChats == nil {
-		m.removedChats = make(map[string]bool)
+func (r *MessengerResponse) AddRemovedChat(chatID string) {
+	if r.removedChats == nil {
+		r.removedChats = make(map[string]bool)
 	}
 
-	m.removedChats[chatID] = true
+	r.removedChats[chatID] = true
 }

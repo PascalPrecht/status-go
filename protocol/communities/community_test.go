@@ -716,7 +716,7 @@ func (s *CommunitySuite) emptyCommunityDescriptionWithChat() *protobuf.Community
 
 }
 
-func (c *CommunitySuite) newConfig(identity *ecdsa.PrivateKey, description *protobuf.CommunityDescription) Config {
+func (s *CommunitySuite) newConfig(identity *ecdsa.PrivateKey, description *protobuf.CommunityDescription) Config {
 	return Config{
 		MemberIdentity:       &identity.PublicKey,
 		ID:                   &identity.PublicKey,
