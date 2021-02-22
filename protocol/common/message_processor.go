@@ -223,7 +223,6 @@ func (p *MessageProcessor) sendCommunity(
 	// earlier than the scheduled
 	p.notifyOnScheduledMessage(rawMessage)
 
-	// When SkipEncryption is set we don't pass the message to the encryption layer
 	messageIDs := [][]byte{messageID}
 	hash, newMessage, err := p.sendCommunityRawMessage(ctx, recipient, wrappedMessage, messageIDs)
 	if err != nil {

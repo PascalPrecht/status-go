@@ -98,13 +98,38 @@ func (r *MessengerResponse) Communities() []*communities.Community {
 }
 
 func (m *MessengerResponse) IsEmpty() bool {
-	return len(m.chats)+len(m.Messages)+len(m.Contacts)+len(m.Installations)+len(m.Invitations)+len(m.EmojiReactions)+len(m.communities)+len(m.CommunityChanges)+len(m.Filters)+len(m.RemovedFilters)+len(m.removedChats)+len(m.MailserverTopics)+len(m.Mailservers)+len(m.MailserverRanges)+len(m.Notifications)+len(m.RequestsToJoinCommunity) == 0
+	return len(m.chats)+
+		len(m.Messages)+
+		len(m.Contacts)+
+		len(m.Installations)+
+		len(m.Invitations)+
+		len(m.EmojiReactions)+
+		len(m.communities)+
+		len(m.CommunityChanges)+
+		len(m.Filters)+
+		len(m.RemovedFilters)+
+		len(m.removedChats)+
+		len(m.MailserverTopics)+
+		len(m.Mailservers)+
+		len(m.MailserverRanges)+
+		len(m.Notifications)+
+		len(m.RequestsToJoinCommunity) == 0
 }
 
 // Merge takes another response and appends the new Chats & new Messages and replaces
 // the existing Messages & Chats if they have the same ID
 func (m *MessengerResponse) Merge(response *MessengerResponse) error {
-	if len(response.Contacts)+len(response.Installations)+len(response.EmojiReactions)+len(response.Invitations)+len(response.RequestsToJoinCommunity)+len(response.Mailservers)+len(response.MailserverTopics)+len(response.MailserverRanges)+len(response.Notifications)+len(response.EmojiReactions)+len(response.CommunityChanges) != 0 {
+	if len(response.Contacts)+
+		len(response.Installations)+
+		len(response.EmojiReactions)+
+		len(response.Invitations)+
+		len(response.RequestsToJoinCommunity)+
+		len(response.Mailservers)+
+		len(response.MailserverTopics)+
+		len(response.MailserverRanges)+
+		len(response.Notifications)+
+		len(response.EmojiReactions)+
+		len(response.CommunityChanges) != 0 {
 		return ErrNotImplemented
 	}
 

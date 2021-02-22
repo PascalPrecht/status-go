@@ -271,7 +271,7 @@ func (s *CommunitySuite) TestDeclineRequestToJoin() {
 	// TEST CASE 3: Valid
 }
 
-func (s *CommunitySuite) TestHandleRequestToJoin() {
+func (s *CommunitySuite) TestValidateRequestToJoin() {
 	description := &protobuf.CommunityDescription{}
 
 	key, err := crypto.GenerateKey()
@@ -421,7 +421,7 @@ func (s *CommunitySuite) TestHandleRequestToJoin() {
 		s.Run(tc.name, func() {
 			org, err := New(tc.config)
 			s.Require().NoError(err)
-			err = org.HandleRequestToJoin(tc.signer, tc.request)
+			err = org.ValidateRequestToJoin(tc.signer, tc.request)
 			s.Require().Equal(tc.err, err)
 		})
 	}
@@ -635,7 +635,7 @@ func (s *CommunitySuite) TestHandleCommunityDescription() {
 			org := s.buildCommunity(signer)
 			org.Join()
 			expectedChanges := tc.changes(org)
-			actualChanges, err := org.HandleCommunityDescription(tc.signer, tc.description(org), []byte{0x01})
+			actualChanges, err := org.UpdateCommunityDescription(tc.signer, tc.description(org), []byte{0x01})
 			s.Require().Equal(tc.err, err)
 			s.Require().Equal(expectedChanges, actualChanges)
 		})
@@ -716,111 +716,74 @@ func (s *CommunitySuite) emptyCommunityDescriptionWithChat() *protobuf.Community
 
 }
 
+func (c *CommunitySuite) newConfig(identity *ecdsa.PrivateKey, description *protobuf.CommunityDescription) Config {
+	return Config{
+		MemberIdentity:       &identity.PublicKey,
+		ID:                   &identity.PublicKey,
+		CommunityDescription: description,
+		PrivateKey:           identity,
+	}
+}
+
 func (s *CommunitySuite) configOnRequest() Config {
 	description := s.emptyCommunityDescription()
 	description.Permissions.Access = protobuf.CommunityPermissions_ON_REQUEST
-	return Config{
-		MemberIdentity:       &s.identity.PublicKey,
-		ID:                   &s.identity.PublicKey,
-		CommunityDescription: description,
-		PrivateKey:           s.identity,
-	}
+	return s.newConfig(s.identity, description)
 }
 
 func (s *CommunitySuite) configInvitationOnly() Config {
 	description := s.emptyCommunityDescription()
 	description.Permissions.Access = protobuf.CommunityPermissions_INVITATION_ONLY
-	return Config{
-		MemberIdentity:       &s.identity.PublicKey,
-		ID:                   &s.identity.PublicKey,
-		CommunityDescription: description,
-		PrivateKey:           s.identity,
-	}
+	return s.newConfig(s.identity, description)
 }
 
 func (s *CommunitySuite) configNoMembershipOrgNoMembershipChat() Config {
 	description := s.emptyCommunityDescriptionWithChat()
 	description.Permissions.Access = protobuf.CommunityPermissions_NO_MEMBERSHIP
 	description.Chats[testChatID1].Permissions.Access = protobuf.CommunityPermissions_NO_MEMBERSHIP
-	return Config{
-		MemberIdentity:       &s.identity.PublicKey,
-		ID:                   &s.identity.PublicKey,
-		CommunityDescription: description,
-		PrivateKey:           s.identity,
-	}
-
+	return s.newConfig(s.identity, description)
 }
 
 func (s *CommunitySuite) configNoMembershipOrgInvitationOnlyChat() Config {
 	description := s.emptyCommunityDescriptionWithChat()
 	description.Permissions.Access = protobuf.CommunityPermissions_NO_MEMBERSHIP
 	description.Chats[testChatID1].Permissions.Access = protobuf.CommunityPermissions_INVITATION_ONLY
-	return Config{
-		MemberIdentity:       &s.identity.PublicKey,
-		ID:                   &s.identity.PublicKey,
-		CommunityDescription: description,
-		PrivateKey:           s.identity,
-	}
+	return s.newConfig(s.identity, description)
 }
 
 func (s *CommunitySuite) configInvitationOnlyOrgInvitationOnlyChat() Config {
 	description := s.emptyCommunityDescriptionWithChat()
 	description.Permissions.Access = protobuf.CommunityPermissions_INVITATION_ONLY
 	description.Chats[testChatID1].Permissions.Access = protobuf.CommunityPermissions_INVITATION_ONLY
-	return Config{
-		MemberIdentity:       &s.identity.PublicKey,
-		ID:                   &s.identity.PublicKey,
-		CommunityDescription: description,
-		PrivateKey:           s.identity,
-	}
+	return s.newConfig(s.identity, description)
 }
 
 func (s *CommunitySuite) configNoMembershipOrgOnRequestChat() Config {
 	description := s.emptyCommunityDescriptionWithChat()
 	description.Permissions.Access = protobuf.CommunityPermissions_NO_MEMBERSHIP
 	description.Chats[testChatID1].Permissions.Access = protobuf.CommunityPermissions_ON_REQUEST
-	return Config{
-		MemberIdentity:       &s.identity.PublicKey,
-		ID:                   &s.identity.PublicKey,
-		CommunityDescription: description,
-		PrivateKey:           s.identity,
-	}
+	return s.newConfig(s.identity, description)
 }
 
 func (s *CommunitySuite) configOnRequestOrgOnRequestChat() Config {
 	description := s.emptyCommunityDescriptionWithChat()
 	description.Permissions.Access = protobuf.CommunityPermissions_ON_REQUEST
 	description.Chats[testChatID1].Permissions.Access = protobuf.CommunityPermissions_ON_REQUEST
-	return Config{
-		MemberIdentity:       &s.identity.PublicKey,
-		ID:                   &s.identity.PublicKey,
-		CommunityDescription: description,
-		PrivateKey:           s.identity,
-	}
+	return s.newConfig(s.identity, description)
 }
 
 func (s *CommunitySuite) configOnRequestOrgInvitationOnlyChat() Config {
 	description := s.emptyCommunityDescriptionWithChat()
 	description.Permissions.Access = protobuf.CommunityPermissions_ON_REQUEST
 	description.Chats[testChatID1].Permissions.Access = protobuf.CommunityPermissions_INVITATION_ONLY
-	return Config{
-		MemberIdentity:       &s.identity.PublicKey,
-		ID:                   &s.identity.PublicKey,
-		CommunityDescription: description,
-		PrivateKey:           s.identity,
-	}
+	return s.newConfig(s.identity, description)
 }
 
 func (s *CommunitySuite) configOnRequestOrgNoMembershipChat() Config {
 	description := s.emptyCommunityDescriptionWithChat()
 	description.Permissions.Access = protobuf.CommunityPermissions_ON_REQUEST
 	description.Chats[testChatID1].Permissions.Access = protobuf.CommunityPermissions_NO_MEMBERSHIP
-	return Config{
-		MemberIdentity:       &s.identity.PublicKey,
-		ID:                   &s.identity.PublicKey,
-		CommunityDescription: description,
-		PrivateKey:           s.identity,
-	}
+	return s.newConfig(s.identity, description)
 }
 
 func (s *CommunitySuite) configChatENSOnly() Config {
@@ -828,24 +791,14 @@ func (s *CommunitySuite) configChatENSOnly() Config {
 	description.Permissions.Access = protobuf.CommunityPermissions_ON_REQUEST
 	description.Chats[testChatID1].Permissions.Access = protobuf.CommunityPermissions_ON_REQUEST
 	description.Chats[testChatID1].Permissions.EnsOnly = true
-	return Config{
-		MemberIdentity:       &s.identity.PublicKey,
-		ID:                   &s.identity.PublicKey,
-		CommunityDescription: description,
-		PrivateKey:           s.identity,
-	}
+	return s.newConfig(s.identity, description)
 }
 
 func (s *CommunitySuite) configENSOnly() Config {
 	description := s.emptyCommunityDescription()
 	description.Permissions.Access = protobuf.CommunityPermissions_ON_REQUEST
 	description.Permissions.EnsOnly = true
-	return Config{
-		MemberIdentity:       &s.identity.PublicKey,
-		ID:                   &s.identity.PublicKey,
-		CommunityDescription: description,
-		PrivateKey:           s.identity,
-	}
+	return s.newConfig(s.identity, description)
 }
 
 func (s *CommunitySuite) config() Config {

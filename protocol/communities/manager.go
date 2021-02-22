@@ -270,7 +270,7 @@ func (m *Manager) HandleCommunityDescriptionMessage(signer *ecdsa.PublicKey, des
 		}
 	}
 
-	changes, err := community.HandleCommunityDescription(signer, description, payload)
+	changes, err := community.UpdateCommunityDescription(signer, description, payload)
 	if err != nil {
 		return nil, err
 	}
@@ -313,7 +313,8 @@ func (m *Manager) HandleCommunityDescriptionMessage(signer *ecdsa.PublicKey, des
 	}, nil
 }
 
-// TODO: Finish implementing this
+// TODO: This is not fully implemented, we want to save the grant passed at
+// this stage and make sure it's used when publishing.
 func (m *Manager) HandleCommunityInvitation(signer *ecdsa.PublicKey, invitation *protobuf.CommunityInvitation, payload []byte) (*CommunityResponse, error) {
 	m.logger.Debug("Handling wrapped community description message")
 
@@ -379,7 +380,7 @@ func (m *Manager) HandleCommunityRequestToJoin(signer *ecdsa.PublicKey, request 
 		return nil, ErrAlreadyMember
 	}
 
-	if err := community.HandleRequestToJoin(signer, request); err != nil {
+	if err := community.ValidateRequestToJoin(signer, request); err != nil {
 		return nil, err
 	}
 
