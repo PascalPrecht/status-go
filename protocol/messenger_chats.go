@@ -3,6 +3,7 @@ package protocol
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"github.com/status-im/status-go/protocol/common"
 	"github.com/status-im/status-go/protocol/requests"
@@ -153,8 +154,8 @@ func (m *Messenger) saveChat(chat *Chat) error {
 		chat.Alias = name
 		chat.Identicon = identicon
 	}
-	// Sync chat if it's a new active public chat
-	if !ok && chat.Active && chat.Public() {
+	// Sync chat if it's a new active public chat, but not a timeline chat
+	if !ok && chat.Active && chat.Public() && !strings.HasPrefix(chat.ID, "@") {
 
 		if err := m.syncPublicChat(context.Background(), chat); err != nil {
 			return err
